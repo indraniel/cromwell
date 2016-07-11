@@ -143,7 +143,7 @@ class CallCachingWorkflowSpec extends CromwellTestkitSpec {
 
     "show valid values for call caching in metadata" taggedAs PostMVP ignore {
       implicit val workflowManagerActor = TestActorRef(
-        new WorkflowManagerActor(CallCachingWorkflowSpec.callCachingConfig, system.actorOf(WorkflowStoreActor.props))
+        new WorkflowManagerActor(CallCachingWorkflowSpec.callCachingConfig, system.actorOf(WorkflowStoreActor.props(dummyServiceRegistryActor)), dummyServiceRegistryActor)
       )
 
       val workflowId = runWdlAndAssertOutputs(

@@ -163,7 +163,8 @@ class Main private[cromwell](managerSystem: WorkflowManagerSystem) {
     val runnerProps = SingleWorkflowRunnerActor.props(workflowSourceFiles,
       metadataPath,
       workflowManagerSystem.workflowManagerActor,
-      workflowManagerSystem.workflowStoreActor)
+      workflowManagerSystem.workflowStoreActor,
+      workflowManagerSystem.serviceRegistryActor)
 
     val runner = workflowManagerSystem.actorSystem.actorOf(runnerProps, "SingleWorkflowRunnerActor")
 

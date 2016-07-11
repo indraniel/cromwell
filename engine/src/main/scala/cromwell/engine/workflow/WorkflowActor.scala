@@ -176,7 +176,8 @@ class WorkflowActor(val workflowId: WorkflowId,
 
   when(MaterializingWorkflowDescriptorState) {
     case Event(MaterializeWorkflowDescriptorSuccessResponse(workflowDescriptor), data) =>
-      val initializerActor = context.actorOf(WorkflowInitializationActor.props(workflowId, workflowDescriptor), name = s"WorkflowInitializationActor-$workflowId")
+      val initializerActor = context.actorOf(WorkflowInitializationActor.props(workflowId, workflowDescriptor, serviceRegistryActor),
+        name = s"WorkflowInitializationActor-$workflowId")
       initializerActor ! StartInitializationCommand
       goto(InitializingWorkflowState) using data.copy(currentLifecycleStateActor = Option(initializerActor), workflowDescriptor = Option(workflowDescriptor))
     case Event(MaterializeWorkflowDescriptorFailureResponse(reason: Throwable), data) =>

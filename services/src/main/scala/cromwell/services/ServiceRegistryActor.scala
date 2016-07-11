@@ -8,13 +8,12 @@ import scala.collection.JavaConverters._
 
 object ServiceRegistryActor {
   case class ServiceRegistryFailure(serviceName: String)
+
   trait ServiceRegistryMessage {
     def serviceName: String
   }
 
-  def props(config: Config) = {
-    Props(ServiceRegistryActor(config))
-  }
+  def props(config: Config) = Props(ServiceRegistryActor(config))
 
   def serviceNameToPropsMap(globalConfig: Config): Map[String, Props] = {
     val serviceNamesToConfigStanzas = globalConfig.getObject("services").entrySet.asScala.map(x => x.getKey -> x.getValue).toMap
@@ -54,3 +53,4 @@ case class ServiceRegistryActor(globalConfig: Config) extends Actor with ActorLo
       sender ! ServiceRegistryFailure("Message is not a ServiceRegistryMessage: " + fool)
   }
 }
+

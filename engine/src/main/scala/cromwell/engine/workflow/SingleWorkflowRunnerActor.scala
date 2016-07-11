@@ -32,8 +32,9 @@ object SingleWorkflowRunnerActor {
   def props(source: WorkflowSourceFiles,
             metadataOutputFile: Option[Path],
             workflowManager: ActorRef,
-            workflowStore: ActorRef): Props = {
-    Props(new SingleWorkflowRunnerActor(source, metadataOutputFile, workflowManager, workflowStore))
+            workflowStore: ActorRef,
+            serviceRegistryActor: ActorRef): Props = {
+    Props(new SingleWorkflowRunnerActor(source, metadataOutputFile, workflowManager, workflowStore, serviceRegistryActor))
   }
 
   sealed trait RunnerMessage
@@ -75,7 +76,8 @@ object SingleWorkflowRunnerActor {
 case class SingleWorkflowRunnerActor(source: WorkflowSourceFiles,
                                      metadataOutputPath: Option[Path],
                                      workflowManager: ActorRef,
-                                     workflowStore: ActorRef)
+                                     workflowStore: ActorRef,
+                                     serviceRegistryActor: ActorRef)
   extends LoggingFSM[RunnerState, RunnerData] with CromwellActor with ServiceRegistryClient {
 
   import SingleWorkflowRunnerActor._

@@ -1,6 +1,6 @@
 package cromwell.backend.impl.jes
 
-import akka.actor.Props
+import akka.actor.{ActorRef, Props}
 import com.google.api.services.genomics.Genomics
 import cromwell.backend.impl.jes.JesImplicits.GoogleAuthWorkflowOptions
 import cromwell.backend.impl.jes.JesInitializationActor._
@@ -21,12 +21,13 @@ object JesInitializationActor {
     JesRuntimeAttributes.PreemptibleKey, JesRuntimeAttributes.BootDiskSizeKey, JesRuntimeAttributes.DisksKey)
 
   def props(workflowDescriptor: BackendWorkflowDescriptor, calls: Seq[Call], jesConfiguration: JesConfiguration): Props =
-    Props(new JesInitializationActor(workflowDescriptor, calls, jesConfiguration)).withDispatcher("akka.dispatchers.slow-actor-dispatcher")
+    Props(new JesInitializationActor(workflowDescriptor, calls, jesConfiguration, serviceRegistryActory: ActorRef)).withDispatcher("akka.dispatchers.slow-actor-dispatcher")
 }
 
 class JesInitializationActor(override val workflowDescriptor: BackendWorkflowDescriptor,
                              override val calls: Seq[Call],
-                             private[jes] val jesConfiguration: JesConfiguration)
+                             private[jes] val jesConfiguration: JesConfiguration,
+                             override val serviceRegistryActor: ActorRef)
   extends BackendWorkflowInitializationActor {
 
   override protected def runtimeAttributeValidators: Map[String, (Option[WdlExpression]) => Boolean] = Map(

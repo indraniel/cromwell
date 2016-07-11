@@ -231,7 +231,7 @@ final case class WorkflowExecutionActor(workflowId: WorkflowId,
                                         serviceRegistryActor: ActorRef,
                                         initializationData: AllBackendInitializationData,
                                         restarting: Boolean)
-  extends LoggingFSM[WorkflowExecutionActorState, WorkflowExecutionActorData] with WorkflowLogging {
+  extends LoggingFSM[WorkflowExecutionActorState, WorkflowExecutionActorData] with WorkflowLogging with ServiceRegistryClient {
 
   import WorkflowExecutionActor._
   import lenthall.config.ScalaConfig._
@@ -557,7 +557,8 @@ final case class WorkflowExecutionActor(workflowId: WorkflowId,
         factories.get(backendName) match {
           case Some(factory) =>
             val ejeActorName = s"${workflowDescriptor.id}-EngineJobExecutionActor-${jobKey.tag}"
-            val ejeActor = context.actorOf(EngineJobExecutionActor.props(data, factory, initializationData.get(backendName), restarting), ejeActorName)
+            val ejeProps = EngineJobExecutionActor.props(data, factory, initializationData.get(backendName), restarting, serviceRegistryActor)
+            val ejeActor = context.actorOf(ejeProps, ejeActorName)
             pushNewJobMetadata(jobKey, backendName)
 
             ejeActor ! EngineJobExecutionActor.Execute(jobKey)

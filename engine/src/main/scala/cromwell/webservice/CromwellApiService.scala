@@ -29,12 +29,18 @@ trait SwaggerService extends SwaggerUiResourceHttpService {
 }
 
 object CromwellApiServiceActor {
-  def props(workflowManagerActorRef: ActorRef, workflowStoreActorRef: ActorRef, config: Config): Props = {
-    Props(new CromwellApiServiceActor(workflowManagerActorRef, workflowStoreActorRef, config))
+  def props(workflowManagerActorRef: ActorRef,
+            workflowStoreActorRef: ActorRef,
+            serviceRegistryActor: ActorRef,
+            config: Config): Props = {
+    Props(new CromwellApiServiceActor(workflowManagerActorRef, workflowStoreActorRef, serviceRegistryActor, config))
   }
 }
 
-class CromwellApiServiceActor(val workflowManager: ActorRef, val workflowStoreActor: ActorRef, config: Config)
+class CromwellApiServiceActor(val workflowManager: ActorRef,
+                              val workflowStoreActor: ActorRef,
+                              override val serviceRegistryActor: ActorRef,
+                              config: Config)
   extends Actor with CromwellApiService with SwaggerService {
   implicit def executionContext = actorRefFactory.dispatcher
   def actorRefFactory = context

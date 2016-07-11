@@ -5,7 +5,7 @@ import java.nio.file.{Path, Paths}
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.event.LoggingReceive
 import better.files._
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
@@ -42,9 +42,13 @@ object JesAsyncBackendJobExecutionActor {
   def props(jobDescriptor: BackendJobDescriptor,
             completionPromise: Promise[BackendJobExecutionResponse],
             jesWorkflowInfo: JesConfiguration,
-            initializationData: JesBackendInitializationData): Props = {
-    Props(new JesAsyncBackendJobExecutionActor(jobDescriptor, completionPromise, jesWorkflowInfo, initializationData))
-      .withDispatcher("akka.dispatchers.slow-actor-dispatcher")
+            initializationData: JesBackendInitializationData,
+            serviceRegistryActor: ActorRef): Props = {
+    Props(new JesAsyncBackendJobExecutionActor(jobDescriptor,
+      completionPromise,
+      jesWorkflowInfo,
+      initializationData,
+      serviceRegistryActor)).withDispatcher("akka.dispatchers.slow-actor-dispatcher")
   }
 
   object WorkflowOptionKeys {
@@ -78,7 +82,8 @@ object JesAsyncBackendJobExecutionActor {
 class JesAsyncBackendJobExecutionActor(override val jobDescriptor: BackendJobDescriptor,
                                        override val completionPromise: Promise[BackendJobExecutionResponse],
                                        jesConfiguration: JesConfiguration,
-                                       initializationData: JesBackendInitializationData)
+                                       initializationData: JesBackendInitializationData,
+                                       override val serviceRegistryActor: ActorRef)
   extends Actor with ActorLogging with AsyncBackendJobExecutionActor with ServiceRegistryClient with JobLogging {
 
   import JesAsyncBackendJobExecutionActor._

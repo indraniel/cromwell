@@ -2,7 +2,7 @@ package cromwell.backend.impl.jes
 
 import java.nio.file.Path
 
-import akka.actor.Props
+import akka.actor.{ActorRef, Props}
 import com.typesafe.config.Config
 import cromwell.backend._
 import cromwell.core.{ExecutionStore, OutputStore}
@@ -23,12 +23,15 @@ case class JesBackendLifecycleActorFactory(configurationDescriptor: BackendConfi
   val jesConfiguration = new JesConfiguration(configurationDescriptor)
 
   override def workflowInitializationActorProps(workflowDescriptor: BackendWorkflowDescriptor,
-                                                calls: Seq[Call]): Option[Props] = {
-    Option(JesInitializationActor.props(workflowDescriptor, calls, jesConfiguration))
+                                                calls: Seq[Call],
+                                                serviceRegistryActor: ActorRef): Option[Props] = {
+    Option(JesInitializationActor.props(workflowDescriptor, calls, jesConfiguration, serviceRegistryActor))
   }
 
-  override def jobExecutionActorProps(jobDescriptor: BackendJobDescriptor, initializationData: Option[BackendInitializationData]): Props = {
-    JesJobExecutionActor.props(jobDescriptor, jesConfiguration, initializationData.toJes)
+  override def jobExecutionActorProps(jobDescriptor: BackendJobDescriptor,
+                                      initializationData: Option[BackendInitializationData],
+                                      serviceRegistryActor: ActorRef): Props = {
+    JesJobExecutionActor.props(jobDescriptor, jesConfiguration, initializationData.toJes, serviceRegistryActor)
   }
 
   override def workflowFinalizationActorProps(workflowDescriptor: BackendWorkflowDescriptor,

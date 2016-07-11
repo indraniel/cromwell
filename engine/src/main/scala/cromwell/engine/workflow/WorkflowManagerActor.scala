@@ -43,7 +43,9 @@ object WorkflowManagerActor {
     */
   sealed trait WorkflowManagerActorResponse extends WorkflowManagerActorMessage
 
-  def props(workflowStore: ActorRef): Props = Props(new WorkflowManagerActor(workflowStore))
+  def props(workflowStore: ActorRef, serviceRegistryActor: ActorRef): Props = {
+    Props(new WorkflowManagerActor(workflowStore, serviceRegistryActor))
+  }
 
   /**
     * States
@@ -73,10 +75,10 @@ object WorkflowManagerActor {
   }
 }
 
-class WorkflowManagerActor(config: Config, val workflowStore: ActorRef)
+class WorkflowManagerActor(config: Config, val workflowStore: ActorRef, override val serviceRegistryActor: ActorRef)
   extends LoggingFSM[WorkflowManagerState, WorkflowManagerData] with CromwellActor with ServiceRegistryClient {
 
-  def this(workflowStore: ActorRef) = this(ConfigFactory.load, workflowStore)
+  def this(workflowStore: ActorRef, serviceRegistryActor: ActorRef) = this(ConfigFactory.load, workflowStore, serviceRegistryActor)
   implicit val actorSystem = context.system
 
   private val maxWorkflowsRunning = config.getConfig("system").getIntOr("max-concurrent-workflows", default=DefaultMaxWorkflowsToRun)
@@ -90,7 +92,8 @@ class WorkflowManagerActor(config: Config, val workflowStore: ActorRef)
   private val donePromise = Promise[Unit]()
 
   private val workflowLogCopyRouter: ActorRef = {
-    context.actorOf(FromConfig.withSupervisorStrategy(CopyWorkflowLogsActor.strategy).props(Props[CopyWorkflowLogsActor].withDispatcher("akka.dispatchers.slow-actor-dispatcher")), "WorkflowLogCopyRouter")
+    val copyWorkflowLogsProps = CopyWorkflowLogsActor.props(serviceRegistryActor).withDispatcher("akka.dispatchers.slow-actor-dispatcher")
+    context.actorOf(FromConfig.withSupervisorStrategy(CopyWorkflowLogsActor.strategy).props(copyWorkflowLogsProps), "WorkflowLogCopyRouter")
   }
 
   override def preStart() {

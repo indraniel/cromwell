@@ -42,9 +42,12 @@ import scala.util.matching.Regex
 
 case class TestBackendLifecycleActorFactory(configurationDescriptor: BackendConfigurationDescriptor) extends BackendLifecycleActorFactory {
   override def workflowInitializationActorProps(workflowDescriptor: BackendWorkflowDescriptor,
-                                                calls: Seq[Call]): Option[Props] = None
+                                                calls: Seq[Call],
+                                                serviceRegistryActor: ActorRef): Option[Props] = None
 
-  override def jobExecutionActorProps(jobDescriptor: BackendJobDescriptor, initializationData: Option[BackendInitializationData]): Props = {
+  override def jobExecutionActorProps(jobDescriptor: BackendJobDescriptor,
+                                      initializationData: Option[BackendInitializationData],
+                                      serviceRegistryActor: ActorRef): Props = {
     throw new NotImplementedError("this is not implemented")
   }
 
@@ -256,6 +259,8 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
   implicit val defaultPatience = PatienceConfig(timeout = Span(30, Seconds), interval = Span(100, Millis))
   implicit val ec = system.dispatcher
 
+  val dummyServiceRegistryActor = system.actorOf(Props.empty)
+
   // Allow to use shouldEqual between 2 WdlTypes while acknowledging for edge cases
   implicit val wdlTypeSoftEquality = new Equality[WdlType] {
     override def areEqual(a: WdlType, b: Any): Boolean = (a, b) match {
@@ -341,8 +346,8 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
   }
 
   private def buildWorkflowManagerActor(config: Config) = {
-    val workflowStore = system.actorOf(WorkflowStoreActor.props())
-    TestActorRef(new WorkflowManagerActor(config, workflowStore), name = "WorkflowManagerActor")
+    val workflowStore = system.actorOf(WorkflowStoreActor.props(serviceRegistryActor = dummyServiceRegistryActor))
+    TestActorRef(new WorkflowManagerActor(config, workflowStore, serviceRegistryActor = dummyServiceRegistryActor), name = "WorkflowManagerActor")
   }
 
   def workflowSuccessFilter = EventFilter.info(pattern = "transition from FinalizingWorkflowState to WorkflowSucceededState", occurrences = 1)

@@ -5,8 +5,10 @@ import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
 import cromwell.engine.backend.{BackendConfiguration, CromwellBackends}
 import cromwell.engine.workflow.{WorkflowManagerActor, WorkflowStoreActor}
+import cromwell.services.ServiceRegistryActor
 import org.slf4j.LoggerFactory
 
+// FIXME: This whole thing should probably get a new name
 trait WorkflowManagerSystem {
   protected def systemName = "cromwell-system"
 
@@ -15,18 +17,12 @@ trait WorkflowManagerSystem {
   val logger = LoggerFactory.getLogger(getClass.getName)
   implicit final lazy val actorSystem = newActorSystem()
 
-  def shutdownActorSystem(): Unit = {
-    actorSystem.shutdown()
-  }
+  def shutdownActorSystem(): Unit = actorSystem.shutdown()
 
-  CromwellBackends.initBackends(
-    BackendConfiguration.AllBackendEntries,
-    actorSystem
-  )
+  CromwellBackends.initBackends(BackendConfiguration.AllBackendEntries, actorSystem)
 
-  lazy val workflowStoreActor = actorSystem.actorOf(WorkflowStoreActor.props(), "WorkflowStoreActor")
-
-  // For now there's only one WorkflowManagerActor so no need to dynamically name it
-  val workflowManagerProps = WorkflowManagerActor.props(workflowStoreActor)
-  lazy val workflowManagerActor = actorSystem.actorOf(workflowManagerProps, "WorkflowManagerActor")
+  // FIXME: Add a higher level supervisor to guard these three
+  lazy val serviceRegistryActor = actorSystem.actorOf(ServiceRegistryActor.props(ConfigFactory.load()), "ServiceRegistryActor")
+  lazy val workflowStoreActor = actorSystem.actorOf(WorkflowStoreActor.props(serviceRegistryActor), "WorkflowStoreActor")
+  lazy val workflowManagerActor = actorSystem.actorOf(WorkflowManagerActor.props(workflowStoreActor, serviceRegistryActor), "WorkflowManagerActor")
 }

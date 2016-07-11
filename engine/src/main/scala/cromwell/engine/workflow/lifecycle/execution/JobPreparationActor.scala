@@ -1,11 +1,12 @@
 package cromwell.engine.workflow.lifecycle.execution
 
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import cromwell.backend._
 import cromwell.core.logging.WorkflowLogging
 import cromwell.core.{ExecutionStore, JobKey, OutputStore}
 import cromwell.engine.EngineWorkflowDescriptor
 import cromwell.engine.workflow.lifecycle.execution.JobPreparationActor._
+import cromwell.services.ServiceRegistryClient
 import wdl4s._
 import wdl4s.expression.WdlStandardLibraryFunctions
 import wdl4s.util.TryUtil
@@ -24,15 +25,18 @@ object JobPreparationActor {
   def props(executionData: WorkflowExecutionActorData,
             jobKey: BackendJobDescriptorKey,
             factory: BackendLifecycleActorFactory,
-            initializationData: Option[BackendInitializationData]) = {
-    Props(new JobPreparationActor(executionData, jobKey, factory, initializationData)).withDispatcher("akka.dispatchers.slow-actor-dispatcher")
+            initializationData: Option[BackendInitializationData],
+            serviceRegistryActor: ActorRef) = {
+    Props(new JobPreparationActor(executionData, jobKey, factory, initializationData, serviceRegistryActor)).withDispatcher("akka.dispatchers.slow-actor-dispatcher")
   }
 }
 
 case class JobPreparationActor(executionData: WorkflowExecutionActorData,
                                jobKey: BackendJobDescriptorKey,
                                factory: BackendLifecycleActorFactory,
-                               initializationData: Option[BackendInitializationData]) extends Actor with WdlLookup with WorkflowLogging {
+                               initializationData: Option[BackendInitializationData],
+                               serviceRegistryActor: ActorRef)
+  extends Actor with WdlLookup with WorkflowLogging with ServiceRegistryClient {
 
   override val workflowDescriptor: EngineWorkflowDescriptor = executionData.workflowDescriptor
   override val workflowId = workflowDescriptor.id
@@ -55,7 +59,7 @@ case class JobPreparationActor(executionData: WorkflowExecutionActorData,
 
   def prepareJobExecutionActor(inputs: Map[LocallyQualifiedName, WdlValue]): Try[BackendJobPreparationSucceeded] = {
     val jobDescriptor = BackendJobDescriptor(workflowDescriptor.backendDescriptor, jobKey, inputs)
-    Try(factory.jobExecutionActorProps(jobDescriptor, initializationData)) map { BackendJobPreparationSucceeded(jobDescriptor, _) }
+    Try(factory.jobExecutionActorProps(jobDescriptor, initializationData, serviceRegistryActor)) map { BackendJobPreparationSucceeded(jobDescriptor, _) }
   }
 
   // Split inputs map (= evaluated workflow declarations + coerced json inputs) into [init\.*].last

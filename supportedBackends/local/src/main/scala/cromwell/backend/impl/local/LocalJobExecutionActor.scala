@@ -2,7 +2,7 @@ package cromwell.backend.impl.local
 
 import java.nio.file.{FileSystems, Path, Paths}
 
-import akka.actor.Props
+import akka.actor.{ActorRef, Props}
 import cromwell.backend.BackendJobExecutionActor.{AbortedResponse, BackendJobExecutionResponse, FailedNonRetryableResponse, SucceededResponse}
 import cromwell.backend._
 import cromwell.backend.io.{JobPaths, SharedFileSystem, SharedFsExpressionFunctions}
@@ -12,7 +12,7 @@ import cromwell.services._
 import org.slf4j.LoggerFactory
 import wdl4s._
 import wdl4s.util.TryUtil
-import wdl4s.values.{WdlMap, WdlArray, WdlFile, WdlValue}
+import wdl4s.values.{WdlArray, WdlFile, WdlMap, WdlValue}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -29,12 +29,15 @@ object LocalJobExecutionActor {
     override def toString = argv.map(s => "\"" + s + "\"").mkString(" ")
   }
 
-  def props(jobDescriptor: BackendJobDescriptor, configurationDescriptor: BackendConfigurationDescriptor): Props =
-    Props(new LocalJobExecutionActor(jobDescriptor, configurationDescriptor))
+  def props(jobDescriptor: BackendJobDescriptor,
+            configurationDescriptor: BackendConfigurationDescriptor,
+            serviceRegistryActor: ActorRef): Props =
+    Props(new LocalJobExecutionActor(jobDescriptor, configurationDescriptor, serviceRegistryActor))
 }
 
 class LocalJobExecutionActor(override val jobDescriptor: BackendJobDescriptor,
-                             override val configurationDescriptor: BackendConfigurationDescriptor)
+                             override val configurationDescriptor: BackendConfigurationDescriptor,
+                             override val serviceRegistryActor: ActorRef)
   extends BackendJobExecutionActor with SharedFileSystem with ServiceRegistryClient {
 
   import LocalJobExecutionActor._

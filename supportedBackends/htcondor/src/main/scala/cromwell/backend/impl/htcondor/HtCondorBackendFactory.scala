@@ -1,6 +1,6 @@
 package cromwell.backend.impl.htcondor
 
-import akka.actor.Props
+import akka.actor.{ActorRef, Props}
 import cromwell.backend._
 import cromwell.backend.impl.htcondor.caching.CacheActorFactory
 import cromwell.backend.io.{JobPaths, SharedFsExpressionFunctions}
@@ -11,11 +11,14 @@ import wdl4s.expression.WdlStandardLibraryFunctions
 case class HtCondorBackendFactory(configurationDescriptor: BackendConfigurationDescriptor) extends BackendLifecycleActorFactory {
 
   override def workflowInitializationActorProps(workflowDescriptor: BackendWorkflowDescriptor,
-                                                calls: Seq[Call]): Option[Props] = {
-    Option(HtCondorInitializationActor.props(workflowDescriptor, calls, configurationDescriptor))
+                                                calls: Seq[Call],
+                                                serviceRegistryActor: ActorRef): Option[Props] = {
+    Option(HtCondorInitializationActor.props(workflowDescriptor, calls, configurationDescriptor, serviceRegistryActor))
   }
 
-  override def jobExecutionActorProps(jobDescriptor: BackendJobDescriptor, initializationData: Option[BackendInitializationData]): Props = {
+  override def jobExecutionActorProps(jobDescriptor: BackendJobDescriptor,
+                                      initializationData: Option[BackendInitializationData],
+                                      serviceRegistryActor: ActorRef): Props = {
     HtCondorJobExecutionActor.props(jobDescriptor, configurationDescriptor, resolveCacheProviderProps())
   }
 

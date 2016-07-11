@@ -3,7 +3,7 @@ package cromwell.engine.workflow
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
 import cromwell.core.{ErrorOr, WorkflowId, WorkflowSourceFiles}
 import cromwell.database.obj.WorkflowMetadataKeys
@@ -89,7 +89,7 @@ abstract class WorkflowStore {
   }
 }
 
-class WorkflowStoreActor extends WorkflowStore with Actor with ServiceRegistryClient {
+class WorkflowStoreActor(override val serviceRegistryActor: ActorRef) extends WorkflowStore with Actor with ServiceRegistryClient {
   /*
     WARNING: WorkflowStore is NOT thread safe. Unless that statement is no longer true do NOT use threads
     outside of the the single threaded Actor event loop
@@ -148,5 +148,5 @@ object WorkflowStoreActor {
   case object NoNewWorkflowsToStart extends WorkflowStoreActorResponse
   case class NewWorkflowsToStart(workflows: NonEmptyList[WorkflowToStart]) extends WorkflowStoreActorResponse
 
-  def props() = Props(new WorkflowStoreActor)
+  def props(serviceRegistryActor: ActorRef) = Props(new WorkflowStoreActor(serviceRegistryActor))
 }

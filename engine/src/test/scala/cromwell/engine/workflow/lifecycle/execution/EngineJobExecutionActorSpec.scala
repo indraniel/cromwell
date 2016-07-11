@@ -1,6 +1,6 @@
 package cromwell.engine.workflow.lifecycle.execution
 
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import akka.testkit.{TestFSMRef, TestProbe}
 import cromwell.CromwellTestkitSpec
 import cromwell.backend.BackendJobExecutionActor._
@@ -30,8 +30,12 @@ class EngineJobExecutionActorSpec extends CromwellTestkitSpec with Matchers with
   })
   val ejeaParent = TestProbe()
   val factory = new BackendLifecycleActorFactory {
-    override def workflowInitializationActorProps(workflowDescriptor: BackendWorkflowDescriptor, calls: Seq[Call]): Option[Props] = None
-    override def jobExecutionActorProps(jobDescriptor: BackendJobDescriptor, initializationData: Option[BackendInitializationData]): Props = mockBackendProps
+    override def workflowInitializationActorProps(workflowDescriptor: BackendWorkflowDescriptor,
+                                                  calls: Seq[Call],
+                                                  serviceRegistryActor: ActorRef): Option[Props] = None
+    override def jobExecutionActorProps(jobDescriptor: BackendJobDescriptor,
+                                        initializationData: Option[BackendInitializationData],
+                                        serviceRegistryActor: ActorRef): Props = mockBackendProps
     override def expressionLanguageFunctions(workflowDescriptor: BackendWorkflowDescriptor, jobKey: BackendJobDescriptorKey, initializationData: Option[BackendInitializationData]): WdlStandardLibraryFunctions = {
       NoFunctions
     }
@@ -41,7 +45,8 @@ class EngineJobExecutionActorSpec extends CromwellTestkitSpec with Matchers with
     WorkflowExecutionActorData(descriptor, ExecutionStore(Map.empty), Map.empty, OutputStore(Map.empty)),
     factory,
     None,
-    restarting = restarting
+    restarting = restarting,
+    dummyServiceRegistryActor
   ), ejeaParent.ref, s"EngineJobExecutionActorSpec-$workflowId")
 
   "EngineJobExecutionActorSpec" should {

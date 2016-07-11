@@ -80,7 +80,7 @@ class CromwellApiServiceSpec extends FlatSpec with CromwellApiService with Scala
 
   override def actorRefFactory = system
   val summaryActor = system.actorOf(MetadataSummaryRefreshActor.props(None), "metadata-summary-actor")
-
+  override val serviceRegistryActor = system.actorOf(Props.empty) // Dummy SRA
 
   override val workflowManager = actorRefFactory.actorOf(Props(new MockWorkflowManagerActor() with WorkflowDescriptorBuilder {
     override implicit  val actorSystem = context.system
@@ -116,7 +116,7 @@ class CromwellApiServiceSpec extends FlatSpec with CromwellApiService with Scala
   behavior of "REST API /status endpoint"
 
   it should "return 500 errors as Json" in {
-    val apiActor = TestActorRef(new CromwellApiServiceActor(workflowManager, workflowStoreActor, ConfigFactory.empty()))
+    val apiActor = TestActorRef(new CromwellApiServiceActor(workflowManager, workflowStoreActor, serviceRegistryActor, ConfigFactory.empty()))
     val probe = TestProbe()
     probe.send(apiActor, Timedout(mock[HttpRequest]))
     probe.expectMsgPF(defaultTimeout.duration) {

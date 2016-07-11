@@ -7,6 +7,7 @@ import cromwell.core.logging.WorkflowLogging
 import cromwell.engine.workflow.lifecycle.execution.EngineJobExecutionActor._
 import cromwell.engine.workflow.lifecycle.execution.JobPreparationActor.{BackendJobPreparationFailed, BackendJobPreparationSucceeded}
 import cromwell.jobstore._
+import cromwell.services.ServiceRegistryClient
 
 object EngineJobExecutionActor {
   /** States */
@@ -22,16 +23,21 @@ object EngineJobExecutionActor {
 
   case class JobRunning(jobDescriptor: BackendJobDescriptor, backendJobExecutionActor: ActorRef)
 
-  def props(executionData: WorkflowExecutionActorData, factory: BackendLifecycleActorFactory,
-            initializationData: Option[BackendInitializationData], restarting: Boolean) = {
-    Props(new EngineJobExecutionActor(executionData, factory, initializationData, restarting))
+  def props(executionData: WorkflowExecutionActorData,
+            factory: BackendLifecycleActorFactory,
+            initializationData: Option[BackendInitializationData],
+            restarting: Boolean,
+            serviceRegistryActor: ActorRef) = {
+    Props(new EngineJobExecutionActor(executionData, factory, initializationData, restarting, serviceRegistryActor))
   }
 }
 
 class EngineJobExecutionActor(executionData: WorkflowExecutionActorData,
                               factory: BackendLifecycleActorFactory,
                               initializationData: Option[BackendInitializationData],
-                              restarting: Boolean) extends LoggingFSM[EngineJobExecutionActorState, Unit] with WorkflowLogging {
+                              restarting: Boolean,
+                              override val serviceRegistryActor: ActorRef)
+  extends LoggingFSM[EngineJobExecutionActorState, Unit] with WorkflowLogging with ServiceRegistryClient {
 
   override val workflowId = executionData.workflowDescriptor.id
 
@@ -85,7 +91,8 @@ class EngineJobExecutionActor(executionData: WorkflowExecutionActorData,
 
   def prepareJob(jobKey: BackendJobDescriptorKey) = {
     val jobPreparationActorName = s"$workflowId-BackendPreparationActor-${jobKey.tag}"
-    val jobPreparationActor = context.actorOf(JobPreparationActor.props(executionData, jobKey, factory, initializationData), jobPreparationActorName)
+    val jobPrepProps = JobPreparationActor.props(executionData, jobKey, factory, initializationData, serviceRegistryActor)
+    val jobPreparationActor = context.actorOf(jobPrepProps, jobPreparationActorName)
     jobPreparationActor ! JobPreparationActor.Start
     goto(PreparingJob)
   }
