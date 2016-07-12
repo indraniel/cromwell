@@ -17,7 +17,7 @@ import cromwell.engine.workflow.WorkflowManagerActor.RetrieveNewWorkflows
 import cromwell.engine.workflow.{WorkflowManagerActor, WorkflowStoreActor}
 import cromwell.engine.workflow.WorkflowStore.{Submitted, WorkflowToStart}
 import cromwell.engine.workflow.WorkflowStoreActor.WorkflowSubmittedToStore
-import cromwell.server.WorkflowManagerSystem
+import cromwell.server.CromwellSystem
 import cromwell.services.MetadataQuery
 import cromwell.services.MetadataServiceActor._
 import cromwell.util.SampleWdl
@@ -100,7 +100,7 @@ object CromwellTestkitSpec {
 
   val TimeoutDuration = 60 seconds
 
-  class TestWorkflowManagerSystem extends WorkflowManagerSystem {
+  class TestWorkflowManagerSystem extends CromwellSystem {
     override protected def systemName: String = "test-system"
     override protected def newActorSystem() = ActorSystem(systemName, ConfigFactory.parseString(CromwellTestkitSpec.ConfigText))
     /**
@@ -115,7 +115,7 @@ object CromwellTestkitSpec {
   /**
     * Loans a test actor system. NOTE: This should be run OUTSIDE of a wait block, never within one.
     */
-  def withTestWorkflowManagerSystem[T](block: WorkflowManagerSystem => T): T = {
+  def withTestWorkflowManagerSystem[T](block: CromwellSystem => T): T = {
     val testWorkflowManagerSystem = new CromwellTestkitSpec.TestWorkflowManagerSystem
     try {
       block(testWorkflowManagerSystem)

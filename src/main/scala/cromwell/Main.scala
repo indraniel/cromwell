@@ -7,7 +7,7 @@ import com.typesafe.config.ConfigFactory
 import cromwell.core.{WorkflowOptions, WorkflowSourceFiles}
 import cromwell.engine.workflow.SingleWorkflowRunnerActor
 import cromwell.engine.workflow.SingleWorkflowRunnerActor.RunWorkflow
-import cromwell.server.{CromwellServer, WorkflowManagerSystem}
+import cromwell.server.{CromwellServer, CromwellSystem}
 import cromwell.util.FileUtil._
 import cromwell.util.PromiseActor
 import org.slf4j.LoggerFactory
@@ -86,10 +86,10 @@ object Main extends App {
   } yield action
 }
 
-class Main private[cromwell](managerSystem: WorkflowManagerSystem) {
+class Main private[cromwell](managerSystem: CromwellSystem) {
   lazy val Log = LoggerFactory.getLogger("cromwell")
 
-  def this() = this(managerSystem = new WorkflowManagerSystem {})
+  def this() = this(managerSystem = new CromwellSystem {})
 
   // CromwellServer still doesn't clean up... so => Any
   def runAction(args: Seq[String]): Int = {
@@ -160,11 +160,7 @@ class Main private[cromwell](managerSystem: WorkflowManagerSystem) {
     val workflowManagerSystem = managerSystem
     implicit val actorSystem = workflowManagerSystem.actorSystem
 
-    val runnerProps = SingleWorkflowRunnerActor.props(workflowSourceFiles,
-      metadataPath,
-      workflowManagerSystem.workflowManagerActor,
-      workflowManagerSystem.workflowStoreActor,
-      workflowManagerSystem.serviceRegistryActor)
+    val runnerProps = SingleWorkflowRunnerActor.props(workflowSourceFiles, metadataPath)
 
     val runner = workflowManagerSystem.actorSystem.actorOf(runnerProps, "SingleWorkflowRunnerActor")
 
@@ -175,7 +171,7 @@ class Main private[cromwell](managerSystem: WorkflowManagerSystem) {
     waitAndExit(promise, workflowManagerSystem)
   }
 
-  private[this] def waitAndExit(futureResult: Future[Any], workflowManagerSystem: WorkflowManagerSystem): Int = {
+  private[this] def waitAndExit(futureResult: Future[Any], workflowManagerSystem: CromwellSystem): Int = {
     Await.ready(futureResult, Duration.Inf)
 
     workflowManagerSystem.shutdownActorSystem()

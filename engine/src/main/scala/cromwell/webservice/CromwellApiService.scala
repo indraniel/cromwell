@@ -1,18 +1,12 @@
 package cromwell.webservice
 
-import java.util.concurrent.TimeoutException
-
 import akka.actor._
-import com.typesafe.config.Config
 import cromwell.core.{WorkflowId, WorkflowSourceFiles}
 import cromwell.services.MetadataServiceActor._
 import cromwell.services.ServiceRegistryClient
 import cromwell.webservice.WorkflowJsonSupport._
 import cromwell.webservice.metadata.MetadataBuilderActor
-import lenthall.config.ScalaConfig._
 import lenthall.spray.SwaggerUiResourceHttpService
-import lenthall.spray.WrappedRoute._
-import spray.http.HttpHeaders.`Content-Type`
 import spray.http.MediaTypes._
 import spray.http._
 import spray.json._
@@ -28,36 +22,8 @@ trait SwaggerService extends SwaggerUiResourceHttpService {
   override def swaggerUiVersion = "2.1.1"
 }
 
-object CromwellApiServiceActor {
-  def props(workflowManagerActorRef: ActorRef,
-            workflowStoreActorRef: ActorRef,
-            serviceRegistryActor: ActorRef,
-            config: Config): Props = {
-    Props(new CromwellApiServiceActor(workflowManagerActorRef, workflowStoreActorRef, serviceRegistryActor, config))
-  }
-}
-
-class CromwellApiServiceActor(val workflowManager: ActorRef,
-                              val workflowStoreActor: ActorRef,
-                              override val serviceRegistryActor: ActorRef,
-                              config: Config)
-  extends Actor with CromwellApiService with SwaggerService {
-  implicit def executionContext = actorRefFactory.dispatcher
-  def actorRefFactory = context
-
-  val possibleRoutes = workflowRoutes.wrapped("api", config.getBooleanOr("api.routeUnwrapped")) ~ swaggerUiResourceRoute
-  val timeoutError = APIResponse.error(new TimeoutException("The server was not able to produce a timely response to your request.")).toJson.prettyPrint
-
-  def receive = handleTimeouts orElse runRoute(possibleRoutes)
-
-  def handleTimeouts: Receive = {
-    case Timedout(_: HttpRequest) =>
-      sender() ! HttpResponse(StatusCodes.InternalServerError, HttpEntity(ContentType(MediaTypes.`application/json`), timeoutError)).withHeaders(`Content-Type`(`application/json`))
-  }
-}
-
 trait CromwellApiService extends HttpService with PerRequestCreator with ServiceRegistryClient {
-  val workflowManager: ActorRef
+  val workflowManagerActor: ActorRef
   val workflowStoreActor: ActorRef
 
   def metadataBuilderProps: Props = MetadataBuilderActor.props(serviceRegistryActor)
@@ -110,7 +76,7 @@ trait CromwellApiService extends HttpService with PerRequestCreator with Service
       post {
         Try(WorkflowId.fromString(workflowId)) match {
           case Success(w) =>
-            requestContext => perRequest(requestContext, CromwellApiHandler.props(workflowManager), CromwellApiHandler.ApiHandlerWorkflowAbort(w))
+            requestContext => perRequest(requestContext, CromwellApiHandler.props(workflowManagerActor), CromwellApiHandler.ApiHandlerWorkflowAbort(w))
           case Failure(ex) => invalidWorkflowId(workflowId)
         }
       }

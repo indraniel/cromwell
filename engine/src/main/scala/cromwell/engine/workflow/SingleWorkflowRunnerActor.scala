@@ -14,6 +14,7 @@ import cromwell.engine.workflow.SingleWorkflowRunnerActor._
 import cromwell.engine.workflow.WorkflowManagerActor.RetrieveNewWorkflows
 import cromwell.engine.workflow.WorkflowStore.{Submitted, WorkflowToStart}
 import cromwell.engine.workflow.WorkflowStoreActor.{NewWorkflowsToStart, SubmitWorkflow}
+import cromwell.server.CromwellRootActor
 import cromwell.services.MetadataServiceActor.{GetSingleWorkflowMetadataAction, GetStatus, WorkflowOutputs}
 import cromwell.services.ServiceRegistryClient
 import cromwell.util.PromiseActor._
@@ -30,11 +31,8 @@ import scala.util.{Failure, Try}
 
 object SingleWorkflowRunnerActor {
   def props(source: WorkflowSourceFiles,
-            metadataOutputFile: Option[Path],
-            workflowManager: ActorRef,
-            workflowStore: ActorRef,
-            serviceRegistryActor: ActorRef): Props = {
-    Props(new SingleWorkflowRunnerActor(source, metadataOutputFile, workflowManager, workflowStore, serviceRegistryActor))
+            metadataOutputFile: Option[Path]): Props = {
+    Props(new SingleWorkflowRunnerActor(source, metadataOutputFile))
   }
 
   sealed trait RunnerMessage
@@ -74,11 +72,8 @@ object SingleWorkflowRunnerActor {
  * are sub-optimal for future use cases where one might want a single workflow being run.
  */
 case class SingleWorkflowRunnerActor(source: WorkflowSourceFiles,
-                                     metadataOutputPath: Option[Path],
-                                     workflowManager: ActorRef,
-                                     workflowStore: ActorRef,
-                                     serviceRegistryActor: ActorRef)
-  extends LoggingFSM[RunnerState, RunnerData] with CromwellActor with ServiceRegistryClient {
+                                     metadataOutputPath: Option[Path])
+  extends CromwellRootActor with LoggingFSM[RunnerState, RunnerData] with CromwellActor with ServiceRegistryClient {
 
   import SingleWorkflowRunnerActor._
 
@@ -113,7 +108,7 @@ case class SingleWorkflowRunnerActor(source: WorkflowSourceFiles,
   when (NotStarted) {
     case Event(RunWorkflow, data) =>
       log.info(s"$Tag: Submitting workflow")
-      workflowStore ! SubmitWorkflow(source)
+      workflowStoreActor ! SubmitWorkflow(source)
       goto (RunningWorkflow) using data.copy(replyTo = Option(sender()))
   }
 
@@ -121,7 +116,7 @@ case class SingleWorkflowRunnerActor(source: WorkflowSourceFiles,
     case Event(WorkflowStoreActor.WorkflowSubmittedToStore(id), data) =>
       log.info(s"$Tag: Workflow submitted UUID($id)")
       // Since we only have a single workflow, force the WorkflowManagerActor's hand in case the polling rate is long
-      workflowManager ! RetrieveNewWorkflows
+      workflowManagerActor ! RetrieveNewWorkflows
       schedulePollRequest()
       stay() using data.copy(id = Option(id))
     case Event(IssuePollRequest, _) =>
