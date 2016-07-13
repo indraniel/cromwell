@@ -12,11 +12,9 @@ import cromwell.core.{WorkflowId, ExecutionStore => _, _}
 import cromwell.engine._
 import cromwell.engine.workflow.SingleWorkflowRunnerActor._
 import cromwell.engine.workflow.WorkflowManagerActor.RetrieveNewWorkflows
-import cromwell.engine.workflow.WorkflowStore.{Submitted, WorkflowToStart}
-import cromwell.engine.workflow.WorkflowStoreActor.{NewWorkflowsToStart, SubmitWorkflow}
+import cromwell.engine.workflow.WorkflowStoreActor.SubmitWorkflow
 import cromwell.server.CromwellRootActor
 import cromwell.services.MetadataServiceActor.{GetSingleWorkflowMetadataAction, GetStatus, WorkflowOutputs}
-import cromwell.services.ServiceRegistryClient
 import cromwell.util.PromiseActor._
 import cromwell.webservice.CromwellApiHandler._
 import cromwell.webservice.PerRequest.RequestComplete
@@ -73,7 +71,7 @@ object SingleWorkflowRunnerActor {
  */
 case class SingleWorkflowRunnerActor(source: WorkflowSourceFiles,
                                      metadataOutputPath: Option[Path])
-  extends CromwellRootActor with LoggingFSM[RunnerState, RunnerData] with CromwellActor with ServiceRegistryClient {
+  extends CromwellRootActor with LoggingFSM[RunnerState, RunnerData] with CromwellActor {
 
   import SingleWorkflowRunnerActor._
 

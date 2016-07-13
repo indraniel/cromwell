@@ -20,8 +20,11 @@ object JesInitializationActor {
   val SupportedKeys = Set(CpuKey, MemoryKey, DockerKey, FailOnStderrKey, ContinueOnReturnCodeKey, JesRuntimeAttributes.ZonesKey,
     JesRuntimeAttributes.PreemptibleKey, JesRuntimeAttributes.BootDiskSizeKey, JesRuntimeAttributes.DisksKey)
 
-  def props(workflowDescriptor: BackendWorkflowDescriptor, calls: Seq[Call], jesConfiguration: JesConfiguration): Props =
-    Props(new JesInitializationActor(workflowDescriptor, calls, jesConfiguration, serviceRegistryActory: ActorRef)).withDispatcher("akka.dispatchers.slow-actor-dispatcher")
+  def props(workflowDescriptor: BackendWorkflowDescriptor,
+            calls: Seq[Call],
+            jesConfiguration: JesConfiguration,
+            serviceRegistryActor: ActorRef): Props =
+    Props(new JesInitializationActor(workflowDescriptor, calls, jesConfiguration, serviceRegistryActor: ActorRef)).withDispatcher("akka.dispatchers.slow-actor-dispatcher")
 }
 
 class JesInitializationActor(override val workflowDescriptor: BackendWorkflowDescriptor,

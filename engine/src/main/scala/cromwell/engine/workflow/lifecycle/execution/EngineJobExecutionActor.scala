@@ -7,7 +7,6 @@ import cromwell.core.logging.WorkflowLogging
 import cromwell.engine.workflow.lifecycle.execution.EngineJobExecutionActor._
 import cromwell.engine.workflow.lifecycle.execution.JobPreparationActor.{BackendJobPreparationFailed, BackendJobPreparationSucceeded}
 import cromwell.jobstore._
-import cromwell.services.ServiceRegistryClient
 
 object EngineJobExecutionActor {
   /** States */
@@ -36,8 +35,8 @@ class EngineJobExecutionActor(executionData: WorkflowExecutionActorData,
                               factory: BackendLifecycleActorFactory,
                               initializationData: Option[BackendInitializationData],
                               restarting: Boolean,
-                              override val serviceRegistryActor: ActorRef)
-  extends LoggingFSM[EngineJobExecutionActorState, Unit] with WorkflowLogging with ServiceRegistryClient {
+                              serviceRegistryActor: ActorRef)
+  extends LoggingFSM[EngineJobExecutionActorState, Unit] with WorkflowLogging {
 
   override val workflowId = executionData.workflowDescriptor.id
 
@@ -59,11 +58,11 @@ class EngineJobExecutionActor(executionData: WorkflowExecutionActorData,
     case Event(JobComplete(jobKey, jobResult), _) =>
       jobResult match {
         case JobResultSuccess(returnCode, jobOutputs) =>
-          context.parent ! new SucceededResponse(jobKey, returnCode, jobOutputs)
+          context.parent ! SucceededResponse(jobKey, returnCode, jobOutputs)
           context stop self
           stay()
         case JobResultFailure(returnCode, reason) =>
-          context.parent ! new FailedNonRetryableResponse(jobKey, reason, returnCode)
+          context.parent ! FailedNonRetryableResponse(jobKey, reason, returnCode)
           context stop self
           stay()
       }

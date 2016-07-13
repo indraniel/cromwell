@@ -10,7 +10,7 @@ import cromwell.core._
 import cromwell.core.logging.WorkflowLogger
 import cromwell.database.obj.WorkflowMetadataKeys
 import cromwell.services.MetadataServiceActor.PutMetadataAction
-import cromwell.services.{MetadataEvent, MetadataKey, MetadataValue, ServiceRegistryClient}
+import cromwell.services.{MetadataEvent, MetadataKey, MetadataValue}
 
 object CopyWorkflowLogsActor {
   // Commands
@@ -25,11 +25,10 @@ object CopyWorkflowLogsActor {
 
 // This could potentially be turned into a more generic "Copy/Move something from A to B"
 // Which could be used for other copying work (outputs, call logs..)
-class CopyWorkflowLogsActor(override val serviceRegistryActor: ActorRef)
+class CopyWorkflowLogsActor(serviceRegistryActor: ActorRef)
     extends Actor
     with ActorLogging
-    with PathFactory
-    with ServiceRegistryClient {
+    with PathFactory {
 
   def copyAndClean(src: Path, dest: Path): Unit = {
     dest.parent.createDirectories()

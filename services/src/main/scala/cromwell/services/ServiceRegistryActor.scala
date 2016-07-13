@@ -36,7 +36,6 @@ object ServiceRegistryActor {
 }
 
 case class ServiceRegistryActor(globalConfig: Config) extends Actor with ActorLogging {
-  println("HERE I AM TO SAVE THE DAY")
   import ServiceRegistryActor._
 
   val services: Map[String, ActorRef] = serviceNameToPropsMap(globalConfig) map {

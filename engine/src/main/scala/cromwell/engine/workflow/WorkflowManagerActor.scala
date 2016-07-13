@@ -3,15 +3,12 @@ package cromwell.engine.workflow
 import akka.actor.FSM.{CurrentState, SubscribeTransitionCallBack, Transition}
 import akka.actor._
 import akka.event.Logging
-import akka.routing.{FromConfig, RoundRobinPool}
 import com.typesafe.config.{Config, ConfigFactory}
 import cromwell.core.WorkflowId
 import cromwell.engine._
 import cromwell.engine.workflow.WorkflowActor._
 import cromwell.engine.workflow.WorkflowManagerActor._
-import cromwell.engine.workflow.lifecycle.CopyWorkflowLogsActor
 import cromwell.services.MetadataServiceActor._
-import cromwell.services.ServiceRegistryClient
 import cromwell.webservice.CromwellApiHandler._
 import lenthall.config.ScalaConfig.EnhancedScalaConfig
 

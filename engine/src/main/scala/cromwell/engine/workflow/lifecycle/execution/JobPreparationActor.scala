@@ -6,7 +6,6 @@ import cromwell.core.logging.WorkflowLogging
 import cromwell.core.{ExecutionStore, JobKey, OutputStore}
 import cromwell.engine.EngineWorkflowDescriptor
 import cromwell.engine.workflow.lifecycle.execution.JobPreparationActor._
-import cromwell.services.ServiceRegistryClient
 import wdl4s._
 import wdl4s.expression.WdlStandardLibraryFunctions
 import wdl4s.util.TryUtil
@@ -36,7 +35,7 @@ case class JobPreparationActor(executionData: WorkflowExecutionActorData,
                                factory: BackendLifecycleActorFactory,
                                initializationData: Option[BackendInitializationData],
                                serviceRegistryActor: ActorRef)
-  extends Actor with WdlLookup with WorkflowLogging with ServiceRegistryClient {
+  extends Actor with WdlLookup with WorkflowLogging {
 
   override val workflowDescriptor: EngineWorkflowDescriptor = executionData.workflowDescriptor
   override val workflowId = workflowDescriptor.id

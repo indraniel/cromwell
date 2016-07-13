@@ -1,16 +1,15 @@
 package cromwell.engine.workflow
 
 import java.time.OffsetDateTime
-import java.util.UUID
 
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
-import cromwell.core.{ErrorOr, WorkflowId, WorkflowSourceFiles}
+import cromwell.core.{WorkflowId, WorkflowSourceFiles}
 import cromwell.database.obj.WorkflowMetadataKeys
 import cromwell.engine.workflow.WorkflowStore.WorkflowToStart
 import cromwell.engine.workflow.WorkflowStoreActor._
 import cromwell.services.MetadataServiceActor.PutMetadataAction
-import cromwell.services.{MetadataEvent, MetadataKey, MetadataValue, ServiceRegistryClient}
+import cromwell.services.{MetadataEvent, MetadataKey, MetadataValue}
 
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -89,7 +88,7 @@ abstract class WorkflowStore {
   }
 }
 
-class WorkflowStoreActor(override val serviceRegistryActor: ActorRef) extends WorkflowStore with Actor with ServiceRegistryClient {
+class WorkflowStoreActor(val serviceRegistryActor: ActorRef) extends WorkflowStore with Actor {
   /*
     WARNING: WorkflowStore is NOT thread safe. Unless that statement is no longer true do NOT use threads
     outside of the the single threaded Actor event loop

@@ -37,8 +37,8 @@ object LocalJobExecutionActor {
 
 class LocalJobExecutionActor(override val jobDescriptor: BackendJobDescriptor,
                              override val configurationDescriptor: BackendConfigurationDescriptor,
-                             override val serviceRegistryActor: ActorRef)
-  extends BackendJobExecutionActor with SharedFileSystem with ServiceRegistryClient {
+                             serviceRegistryActor: ActorRef)
+  extends BackendJobExecutionActor with SharedFileSystem {
 
   import LocalJobExecutionActor._
   import better.files._

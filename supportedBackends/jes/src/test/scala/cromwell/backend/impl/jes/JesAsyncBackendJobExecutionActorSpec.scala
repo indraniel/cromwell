@@ -90,7 +90,8 @@ class JesAsyncBackendJobExecutionActorSpec extends TestKitSuite("JesAsyncBackend
                                      functions: JesExpressionFunctions = TestableJesExpressionFunctions)
     extends JesAsyncBackendJobExecutionActor(jobDescriptor, promise, jesConfiguration, buildInitializationData(jobDescriptor, jesConfiguration), emptyActor) {
     // TODO: PBE: services are currently implemented in the engine, so we can't spin them up in specs
-    override val serviceRegistryActor = system.actorOf(Props.empty)
+    // FIXME: This doesn't appear to be used
+    val serviceRegistryActor = system.actorOf(Props.empty)
 
     override lazy val jobLogger = new LoggerWrapper {
       override def akkaLogger: Option[LoggingAdapter] = Option(log)

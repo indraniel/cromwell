@@ -83,8 +83,8 @@ class JesAsyncBackendJobExecutionActor(override val jobDescriptor: BackendJobDes
                                        override val completionPromise: Promise[BackendJobExecutionResponse],
                                        jesConfiguration: JesConfiguration,
                                        initializationData: JesBackendInitializationData,
-                                       override val serviceRegistryActor: ActorRef)
-  extends Actor with ActorLogging with AsyncBackendJobExecutionActor with ServiceRegistryClient with JobLogging {
+                                       serviceRegistryActor: ActorRef)
+  extends Actor with ActorLogging with AsyncBackendJobExecutionActor with JobLogging {
 
   import JesAsyncBackendJobExecutionActor._
 

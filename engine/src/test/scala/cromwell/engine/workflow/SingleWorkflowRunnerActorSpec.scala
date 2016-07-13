@@ -45,8 +45,9 @@ object SingleWorkflowRunnerActorSpec {
 
 abstract class SingleWorkflowRunnerActorSpec extends CromwellTestkitSpec {
   private val workflowStore = system.actorOf(WorkflowStoreActor.props(dummyServiceRegistryActor))
+
   def workflowManagerActor(): ActorRef = {
-    system.actorOf(Props(new WorkflowManagerActor(ConfigFactory.load(), workflowStore, dummyServiceRegistryActor)), "WorkflowManagerActor")
+    system.actorOf(Props(new WorkflowManagerActor(ConfigFactory.load(), workflowStore, dummyServiceRegistryActor, dummyLogCopyRouter)), "WorkflowManagerActor")
   }
   
   def createRunnerActor(sampleWdl: SampleWdl = ThreeStep, managerActor: => ActorRef = workflowManagerActor(),

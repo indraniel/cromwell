@@ -62,6 +62,7 @@ case class OutputNotFoundException(outputFqn: String, actualOutputs: String) ext
 case class LogNotFoundException(log: String) extends RuntimeException(s"Expected log $log was not found")
 
 object CromwellTestkitSpec {
+  // FIXME: Remove the router
   val ConfigText =
     """
       |akka {
@@ -260,6 +261,7 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
   implicit val ec = system.dispatcher
 
   val dummyServiceRegistryActor = system.actorOf(Props.empty)
+  val dummyLogCopyRouter = system.actorOf(Props.empty)
 
   // Allow to use shouldEqual between 2 WdlTypes while acknowledging for edge cases
   implicit val wdlTypeSoftEquality = new Equality[WdlType] {
@@ -347,7 +349,7 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
 
   private def buildWorkflowManagerActor(config: Config) = {
     val workflowStore = system.actorOf(WorkflowStoreActor.props(serviceRegistryActor = dummyServiceRegistryActor))
-    TestActorRef(new WorkflowManagerActor(config, workflowStore, serviceRegistryActor = dummyServiceRegistryActor), name = "WorkflowManagerActor")
+    TestActorRef(new WorkflowManagerActor(config, workflowStore, dummyServiceRegistryActor, dummyLogCopyRouter), name = "WorkflowManagerActor")
   }
 
   def workflowSuccessFilter = EventFilter.info(pattern = "transition from FinalizingWorkflowState to WorkflowSucceededState", occurrences = 1)

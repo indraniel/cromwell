@@ -231,7 +231,7 @@ final case class WorkflowExecutionActor(workflowId: WorkflowId,
                                         serviceRegistryActor: ActorRef,
                                         initializationData: AllBackendInitializationData,
                                         restarting: Boolean)
-  extends LoggingFSM[WorkflowExecutionActorState, WorkflowExecutionActorData] with WorkflowLogging with ServiceRegistryClient {
+  extends LoggingFSM[WorkflowExecutionActorState, WorkflowExecutionActorData] with WorkflowLogging {
 
   import WorkflowExecutionActor._
   import lenthall.config.ScalaConfig._

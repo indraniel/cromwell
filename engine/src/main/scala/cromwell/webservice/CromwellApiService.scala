@@ -3,7 +3,6 @@ package cromwell.webservice
 import akka.actor._
 import cromwell.core.{WorkflowId, WorkflowSourceFiles}
 import cromwell.services.MetadataServiceActor._
-import cromwell.services.ServiceRegistryClient
 import cromwell.webservice.WorkflowJsonSupport._
 import cromwell.webservice.metadata.MetadataBuilderActor
 import lenthall.spray.SwaggerUiResourceHttpService
@@ -22,9 +21,10 @@ trait SwaggerService extends SwaggerUiResourceHttpService {
   override def swaggerUiVersion = "2.1.1"
 }
 
-trait CromwellApiService extends HttpService with PerRequestCreator with ServiceRegistryClient {
+trait CromwellApiService extends HttpService with PerRequestCreator {
   val workflowManagerActor: ActorRef
   val workflowStoreActor: ActorRef
+  val serviceRegistryActor: ActorRef
 
   def metadataBuilderProps: Props = MetadataBuilderActor.props(serviceRegistryActor)
   def handleMetadataRequest(message: AnyRef)(requestContext: RequestContext): Unit = {
