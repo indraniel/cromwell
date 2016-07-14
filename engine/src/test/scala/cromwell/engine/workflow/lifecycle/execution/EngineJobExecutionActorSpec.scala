@@ -94,9 +94,9 @@ class EngineJobExecutionActorSpec extends CromwellTestkitSpec with Matchers with
       ejea.stop()
     }
 
-    // This test is bit redundant with the one above, hoever this one tests the behaviour when getting a Restart message
-    // whereas the test above tests the behaviour when getting a JobNotComplete response from JobReader
-    "send an RecoverJobCommand to the backend when getting an Execute message if the Job is not complete and EJEA is in restarting mode" in {
+    // This test is bit redundant with the one above, however this one tests the behavior when getting a Restart message
+    // whereas the test above tests the behavior when getting a JobNotComplete response from JobReader
+    "send a RecoverJobCommand to the backend when getting an Execute message if the Job is not complete and EJEA is in restarting mode" in {
       val ejea = buildEJEA(restarting = true)
       ejea.setState(Pending)
       val task = mock[Task]

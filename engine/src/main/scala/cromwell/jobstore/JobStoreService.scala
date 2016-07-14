@@ -27,7 +27,9 @@ case class JobStoreService(serviceConfig: Config, globalConfig: Config) extends 
 }
 
 object JobStoreService {
-  sealed trait JobStoreWriterServiceCommand extends ServiceRegistryMessage { override def serviceName = "JobStoreWriter" }
+  sealed trait JobStoreCommand extends ServiceRegistryMessage { override def serviceName: String = "JobStore"}
+
+  sealed trait JobStoreWriterServiceCommand extends JobStoreCommand
   case class RegisterJobCompleted(jobKey: JobStoreKey, jobResult: JobResult) extends JobStoreWriterServiceCommand
   case class RegisterWorkflowCompleted(workflowId: WorkflowId) extends JobStoreWriterServiceCommand
 
@@ -35,7 +37,7 @@ object JobStoreService {
   case class JobStoreWriteSuccess(originalCommand: JobStoreWriterServiceCommand) extends JobStoreWriterServiceResponse
   case class JobStoreWriteFailure(originalCommand: JobStoreWriterServiceCommand, reason: Throwable) extends JobStoreWriterServiceResponse
 
-  sealed trait JobStoreReaderServiceCommand extends ServiceRegistryMessage { override def serviceName = "JobStoreReader" }
+  sealed trait JobStoreReaderServiceCommand extends JobStoreCommand
   /**
     * Message to query the JobStoreReaderActor, asks whether the specified job has already been completed.
     */
