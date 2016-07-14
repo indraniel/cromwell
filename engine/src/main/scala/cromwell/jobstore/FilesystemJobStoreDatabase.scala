@@ -1,19 +1,14 @@
 package cromwell.jobstore
 
 import java.io.File
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Files, Paths}
 
 import cromwell.core.ExecutionIndex._
-import cromwell.core.{JobOutputs, WorkflowId}
-import spray.json._
-import wdl4s.WdlExpression
-import wdl4s.types.WdlArrayType
-import wdl4s.values._
-import cromwell.webservice.WdlValueJsonFormatter._
+import cromwell.core.WorkflowId
 import org.apache.commons.io.FileUtils
+import spray.json._
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 
 
 case object FilesystemJobStoreDatabase extends JobStoreDatabase {
