@@ -2,7 +2,7 @@ package cromwell.jobstore
 
 import cromwell.CromwellTestkitSpec
 import cromwell.core.WorkflowId
-import cromwell.jobstore.JobStoreWriterService.{JobStoreWriteSuccess, RegisterJobCompleted, RegisterWorkflowCompleted}
+import cromwell.jobstore.JobStoreService.{JobStoreWriteSuccess, RegisterJobCompleted, RegisterWorkflowCompleted}
 import org.scalatest.Matchers
 
 import scala.concurrent.duration._
@@ -75,6 +75,8 @@ class WriteCountingJobStoreDatabase(var totalWritesCalled: Int, var jobCompletio
     workflowCompletionsRecorded += workflowCompletions.size
     Future.successful(())
   }
+
+  override def readJobResult(jobStoreKey: JobStoreKey)(implicit ec: ExecutionContext): Future[Option[JobResult]] = ???
 }
 
 object WriteCountingJobStoreDatabase {

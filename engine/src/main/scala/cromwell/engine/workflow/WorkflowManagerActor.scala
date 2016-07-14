@@ -10,7 +10,7 @@ import cromwell.engine._
 import cromwell.engine.workflow.WorkflowActor._
 import cromwell.engine.workflow.WorkflowManagerActor._
 import cromwell.engine.workflow.lifecycle.CopyWorkflowLogsActor
-import cromwell.jobstore.JobStoreWriterService.RegisterWorkflowCompleted
+import cromwell.jobstore.JobStoreService.RegisterWorkflowCompleted
 import cromwell.services.MetadataServiceActor._
 import cromwell.services.ServiceRegistryClient
 import cromwell.webservice.CromwellApiHandler._

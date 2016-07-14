@@ -1,13 +1,9 @@
 package cromwell
 
-import cromwell.core.{JobKey, JobOutput, JobOutputs, WorkflowId}
-import spray.json._
-import wdl4s.WdlExpression
-import wdl4s.types.WdlArrayType
-import wdl4s.values._
-import cromwell.webservice.WdlFileJsonFormatter._
+import cromwell.backend.BackendJobDescriptorKey
+import cromwell.core.{JobOutput, JobOutputs, WorkflowId}
 import cromwell.webservice.WdlValueJsonFormatter.WdlValueJsonFormat
-import spray.json.{DefaultJsonProtocol, JsString, JsValue, RootJsonFormat}
+import spray.json.{DefaultJsonProtocol, JsValue, RootJsonFormat, _}
 
 package object jobstore {
   case class JobStoreKey(workflowId: WorkflowId, callFqn: String, index: Option[Int], attempt: Int)
@@ -15,6 +11,10 @@ package object jobstore {
   sealed trait JobResult
   case class JobResultSuccess(returnCode: Option[Int], jobOutputs: JobOutputs) extends JobResult
   case class JobResultFailure(returnCode: Option[Int], reason: Throwable) extends JobResult
+
+  implicit class EnhancedBackendJobDescriptorKey(val backendKey: BackendJobDescriptorKey) extends AnyVal {
+    def toStoreKey(workflowId: WorkflowId): JobStoreKey = JobStoreKey(workflowId, backendKey.call.fullyQualifiedName, backendKey.index, backendKey.attempt)
+  }
 
   object JobResultJsonFormatter extends DefaultJsonProtocol {
     implicit object ThrowableFormat extends RootJsonFormat[Throwable] {

@@ -9,7 +9,8 @@ import cromwell.core.{ExecutionStore, JobOutputs, OutputStore, WorkflowId}
 import cromwell.engine.workflow.WorkflowDescriptorBuilder
 import cromwell.engine.workflow.lifecycle.execution.EngineJobExecutionActor._
 import cromwell.engine.workflow.lifecycle.execution.JobPreparationActor.BackendJobPreparationFailed
-import cromwell.jobstore.{JobComplete, JobNotComplete, JobResultFailure, JobResultSuccess}
+import cromwell.jobstore.JobStoreService.{JobComplete, JobNotComplete}
+import cromwell.jobstore.{JobResultFailure, JobResultSuccess}
 import cromwell.util.SampleWdl
 import org.scalatest.{BeforeAndAfterAll, Matchers}
 import org.specs2.mock.Mockito

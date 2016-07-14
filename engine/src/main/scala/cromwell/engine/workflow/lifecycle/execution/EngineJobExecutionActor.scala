@@ -6,7 +6,9 @@ import cromwell.backend.{BackendInitializationData, BackendJobDescriptor, Backen
 import cromwell.core.logging.WorkflowLogging
 import cromwell.engine.workflow.lifecycle.execution.EngineJobExecutionActor._
 import cromwell.engine.workflow.lifecycle.execution.JobPreparationActor.{BackendJobPreparationFailed, BackendJobPreparationSucceeded}
+import cromwell.jobstore.JobStoreService.{JobComplete, JobNotComplete, QueryJobCompletion}
 import cromwell.jobstore.{Pending => _, _}
+import cromwell.services.ServiceRegistryClient
 
 object EngineJobExecutionActor {
   /** States */
@@ -18,9 +20,9 @@ object EngineJobExecutionActor {
 
   /** Commands */
   sealed trait EngineJobExecutionActorCommand
-  case class Execute(jobKey: BackendJobDescriptorKey) extends EngineJobExecutionActorCommand
+  final case class Execute(jobKey: BackendJobDescriptorKey) extends EngineJobExecutionActorCommand
 
-  case class JobRunning(jobDescriptor: BackendJobDescriptor, backendJobExecutionActor: ActorRef)
+  final case class JobRunning(jobDescriptor: BackendJobDescriptor, backendJobExecutionActor: ActorRef)
 
   def props(executionData: WorkflowExecutionActorData, factory: BackendLifecycleActorFactory,
             initializationData: Option[BackendInitializationData], restarting: Boolean) = {
@@ -31,7 +33,7 @@ object EngineJobExecutionActor {
 class EngineJobExecutionActor(executionData: WorkflowExecutionActorData,
                               factory: BackendLifecycleActorFactory,
                               initializationData: Option[BackendInitializationData],
-                              restarting: Boolean) extends LoggingFSM[EngineJobExecutionActorState, Unit] with WorkflowLogging {
+                              restarting: Boolean) extends LoggingFSM[EngineJobExecutionActorState, Unit] with WorkflowLogging with ServiceRegistryClient {
 
   override val workflowId = executionData.workflowDescriptor.id
 
@@ -40,7 +42,7 @@ class EngineJobExecutionActor(executionData: WorkflowExecutionActorData,
   when(Pending) {
     case Event(Execute(jobKey), _) =>
       if (restarting) {
-        context.actorOf(JobStoreReader.props()) ! QueryJobCompletion(jobKey)
+        serviceRegistryActor ! QueryJobCompletion(workflowId, jobKey)
         goto(CheckingJobStatus)
       } else {
         prepareJob(jobKey)

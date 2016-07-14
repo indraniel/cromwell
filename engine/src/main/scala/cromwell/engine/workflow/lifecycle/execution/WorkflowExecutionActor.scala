@@ -22,7 +22,7 @@ import cromwell.engine.workflow.lifecycle.execution.JobPreparationActor.BackendJ
 import cromwell.engine.workflow.lifecycle.execution.WorkflowExecutionActor.WorkflowExecutionActorState
 import cromwell.engine.workflow.lifecycle.{EngineLifecycleActorAbortCommand, EngineLifecycleActorAbortedResponse}
 import cromwell.jobstore.{JobResultFailure, JobResultSuccess, JobStoreKey}
-import cromwell.jobstore.JobStoreWriterService.RegisterJobCompleted
+import cromwell.jobstore.JobStoreService.RegisterJobCompleted
 import cromwell.services.MetadataServiceActor._
 import cromwell.services._
 import lenthall.exception.ThrowableAggregation
