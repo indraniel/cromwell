@@ -18,7 +18,7 @@ import cromwell.engine.workflow.{WorkflowManagerActor, WorkflowStoreActor}
 import cromwell.engine.workflow.WorkflowStore.{Submitted, WorkflowToStart}
 import cromwell.engine.workflow.WorkflowStoreActor.WorkflowSubmittedToStore
 import cromwell.server.CromwellSystem
-import cromwell.services.MetadataQuery
+import cromwell.services.{MetadataQuery, ServiceRegistryActor}
 import cromwell.services.MetadataServiceActor._
 import cromwell.util.SampleWdl
 import cromwell.webservice.PerRequest.RequestComplete
@@ -347,9 +347,10 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
     }
   }
 
-  private def buildWorkflowManagerActor(config: Config) = {
-    val workflowStore = system.actorOf(WorkflowStoreActor.props(serviceRegistryActor = dummyServiceRegistryActor))
-    TestActorRef(new WorkflowManagerActor(config, workflowStore, dummyServiceRegistryActor, dummyLogCopyRouter), name = "WorkflowManagerActor")
+  private def buildWorkflowManagerActorForRunningFullWdlTests(config: Config) = {
+    val serviceRegistryActor = system.actorOf(ServiceRegistryActor.props(config))
+    val workflowStore = system.actorOf(WorkflowStoreActor.props(serviceRegistryActor))
+    TestActorRef(new WorkflowManagerActor(config, workflowStore, serviceRegistryActor, dummyLogCopyRouter), name = "WorkflowManagerActor")
   }
 
   def workflowSuccessFilter = EventFilter.info(pattern = "transition from FinalizingWorkflowState to WorkflowSucceededState", occurrences = 1)
@@ -360,7 +361,7 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
              workflowOptions: String = "{}",
              terminalState: WorkflowState = WorkflowSucceeded,
              config: Config = DefaultConfig)(implicit ec: ExecutionContext): Map[FullyQualifiedName, WdlValue] = {
-    val wma = buildWorkflowManagerActor(config)
+    val wma = buildWorkflowManagerActorForRunningFullWdlTests(config)
     val sources = WorkflowSourceFiles(sampleWdl.wdlSource(runtime), sampleWdl.wdlJson, workflowOptions)
     eventFilter.intercept {
       within(TimeoutDuration) {
@@ -390,7 +391,7 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
                              config: Config = DefaultConfig,
                              workflowManagerActor: Option[TestActorRef[WorkflowManagerActor]] = None)
                             (implicit ec: ExecutionContext): WorkflowId = {
-    val workflowManager = workflowManagerActor.getOrElse(buildWorkflowManagerActor(config))
+    val workflowManager = workflowManagerActor.getOrElse(buildWorkflowManagerActorForRunningFullWdlTests(config))
     val sources = sampleWdl.asWorkflowSources(runtime, workflowOptions)
     def isFatal(e: Throwable) = e match {
       case _: OutputNotFoundException => false
@@ -407,7 +408,7 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
           val expectedOutputNames = expectedOutputs.keys mkString " "
 
           expectedOutputs foreach { case (outputFqn, expectedValue) =>
-            val actualValue = outputs.getOrElse(outputFqn, throw new OutputNotFoundException(outputFqn, actualOutputNames))
+            val actualValue = outputs.getOrElse(outputFqn, throw OutputNotFoundException(outputFqn, actualOutputNames))
             if (expectedValue != AnyValueIsFine) actualValue shouldEqual expectedValue
           }
           if (!allowOtherOutputs) {
@@ -436,7 +437,7 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
                           config: Config = DefaultConfig,
                           workflowManagerActor: Option[TestActorRef[WorkflowManagerActor]] = None)
                          (implicit ec: ExecutionContext): WorkflowId = {
-    val workflowManager = workflowManagerActor.getOrElse(buildWorkflowManagerActor(config))
+    val workflowManager = workflowManagerActor.getOrElse(buildWorkflowManagerActorForRunningFullWdlTests(config))
     val sources = sampleWdl.asWorkflowSources(runtime, workflowOptions)
     def isFatal(e: Throwable) = e match {
       case _: LogNotFoundException => false
