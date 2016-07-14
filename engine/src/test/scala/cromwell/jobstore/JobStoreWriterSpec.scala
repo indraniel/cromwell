@@ -76,7 +76,7 @@ class WriteCountingJobStoreDatabase(var totalWritesCalled: Int, var jobCompletio
     Future.successful(())
   }
 
-  override def readJobResult(jobStoreKey: JobStoreKey)(implicit ec: ExecutionContext): Future[Option[JobResult]] = ???
+  override def readJobResult(jobStoreKey: JobStoreKey)(implicit ec: ExecutionContext): Future[Option[JobResult]] = throw new NotImplementedError()
 }
 
 object WriteCountingJobStoreDatabase {

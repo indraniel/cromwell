@@ -19,7 +19,7 @@ class JobResultSpec extends FlatSpec with Matchers {
     val asJson = success.toJson
 
     val jsonString = asJson.toString()
-    jsonString shouldBe "{\"returnCode\":0,\"jobOutputs\":{\"abc\":\"hello\"}}"
+    jsonString shouldBe """{"returnCode":0,"jobOutputs":{"abc":"hello"}}"""
 
     val fromJsonString = jsonString.parseJson
     val fromJson = fromJsonString.convertTo[JobResultSuccess]
@@ -44,7 +44,7 @@ class JobResultSpec extends FlatSpec with Matchers {
     val asJson = failure.toJson
 
     val jsonString = asJson.toString()
-    jsonString shouldBe "{\"returnCode\":0,\"reason\":\"abc\"}"
+    jsonString shouldBe """{"returnCode":0,"reason":"abc"}"""
 
     val fromJsonString = jsonString.parseJson
     val fromJson = fromJsonString.convertTo[JobResultFailure]

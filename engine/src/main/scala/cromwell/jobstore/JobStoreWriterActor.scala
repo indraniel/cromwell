@@ -18,13 +18,13 @@ case class JobStoreWriterActor(jsd: JobStoreDatabase) extends LoggingFSM[JobStor
   startWith(Pending, JobStoreWriterData.empty)
 
   when(Pending) {
-    case Event(command: JobStoreWriterServiceCommand, stateData) =>
+    case Event(command: JobStoreWriterCommand, stateData) =>
       val newData = writeNextOperationToDatabase(stateData.withNewOperation(sender, command))
       goto(WritingToDatabase) using newData
   }
 
   when(WritingToDatabase) {
-    case Event(command: JobStoreWriterServiceCommand, stateData) =>
+    case Event(command: JobStoreWriterCommand, stateData) =>
       stay using stateData.withNewOperation(sender, command)
     case Event(WriteComplete, stateData) =>
       val newData = writeNextOperationToDatabase(stateData)
@@ -81,9 +81,9 @@ object JobStoreWriterData {
   def empty = JobStoreWriterData(List.empty, List.empty)
 }
 
-case class JobStoreWriterData(currentOperation: List[(ActorRef, JobStoreWriterServiceCommand)], nextOperation: List[(ActorRef, JobStoreWriterServiceCommand)]){
+case class JobStoreWriterData(currentOperation: List[(ActorRef, JobStoreWriterCommand)], nextOperation: List[(ActorRef, JobStoreWriterCommand)]){
   def isEmpty = nextOperation.isEmpty && currentOperation.isEmpty
-  def withNewOperation(sender: ActorRef, command: JobStoreWriterServiceCommand) = this.copy(nextOperation = this.nextOperation :+ (sender, command))
+  def withNewOperation(sender: ActorRef, command: JobStoreWriterCommand) = this.copy(nextOperation = this.nextOperation :+ (sender, command))
   def rolledOver = JobStoreWriterData(this.nextOperation, List.empty)
 }
 

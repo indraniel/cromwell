@@ -13,7 +13,7 @@ package object jobstore {
   case class JobResultFailure(returnCode: Option[Int], reason: Throwable) extends JobResult
 
   implicit class EnhancedBackendJobDescriptorKey(val backendKey: BackendJobDescriptorKey) extends AnyVal {
-    def toStoreKey(workflowId: WorkflowId): JobStoreKey = JobStoreKey(workflowId, backendKey.call.fullyQualifiedName, backendKey.index, backendKey.attempt)
+    def toJobStoreKey(workflowId: WorkflowId): JobStoreKey = JobStoreKey(workflowId, backendKey.call.fullyQualifiedName, backendKey.index, backendKey.attempt)
   }
 
   object JobResultJsonFormatter extends DefaultJsonProtocol {

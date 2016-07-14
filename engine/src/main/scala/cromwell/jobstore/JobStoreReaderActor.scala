@@ -17,7 +17,7 @@ class JobStoreReaderActor(database: JobStoreDatabase) extends Actor with ActorLo
   override def receive = LoggingReceive {
     case QueryJobCompletion(workflowId, key) =>
       val replyTo = sender()
-      database.readJobResult(key.toStoreKey(workflowId)) onComplete {
+      database.readJobResult(key.toJobStoreKey(workflowId)) onComplete {
         case Success(Some(result)) => replyTo ! JobComplete(key, result)
         case Success(None) => replyTo ! JobNotComplete(key)
         case Failure(t) => replyTo ! JobStoreReadFailure(key, t)

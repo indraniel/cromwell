@@ -4,12 +4,12 @@ import akka.actor.Actor
 import com.typesafe.config.Config
 import cromwell.backend.BackendJobDescriptorKey
 import cromwell.core.WorkflowId
-import cromwell.jobstore.JobStoreService.{JobStoreReaderServiceCommand, JobStoreWriterServiceCommand}
+import cromwell.jobstore.JobStoreService.{JobStoreReaderCommand, JobStoreWriterCommand}
 import cromwell.services.ServiceRegistryActor.ServiceRegistryMessage
 
 
 /**
-  * Joins the service registry API to the JobStoreWriterActor.
+  * Joins the service registry API to the JobStoreReaderActor and JobStoreWriterActor.
   *
   * This level of indirection is a tiny bit awkward but allows the database to be injected.
   */
@@ -21,27 +21,27 @@ case class JobStoreService(serviceConfig: Config, globalConfig: Config) extends 
   val jobStoreReaderActor = context.actorOf(JobStoreReaderActor.props(database))
 
   override def receive: Receive = {
-    case command: JobStoreWriterServiceCommand => jobStoreWriterActor.tell(command, sender())
-    case command: JobStoreReaderServiceCommand => jobStoreReaderActor.tell(command, sender())
+    case command: JobStoreWriterCommand => jobStoreWriterActor.tell(command, sender())
+    case command: JobStoreReaderCommand => jobStoreReaderActor.tell(command, sender())
   }
 }
 
 object JobStoreService {
   sealed trait JobStoreCommand extends ServiceRegistryMessage { override def serviceName: String = "JobStore"}
 
-  sealed trait JobStoreWriterServiceCommand extends JobStoreCommand
-  case class RegisterJobCompleted(jobKey: JobStoreKey, jobResult: JobResult) extends JobStoreWriterServiceCommand
-  case class RegisterWorkflowCompleted(workflowId: WorkflowId) extends JobStoreWriterServiceCommand
+  sealed trait JobStoreWriterCommand extends JobStoreCommand
+  case class RegisterJobCompleted(jobKey: JobStoreKey, jobResult: JobResult) extends JobStoreWriterCommand
+  case class RegisterWorkflowCompleted(workflowId: WorkflowId) extends JobStoreWriterCommand
 
-  sealed trait JobStoreWriterServiceResponse
-  case class JobStoreWriteSuccess(originalCommand: JobStoreWriterServiceCommand) extends JobStoreWriterServiceResponse
-  case class JobStoreWriteFailure(originalCommand: JobStoreWriterServiceCommand, reason: Throwable) extends JobStoreWriterServiceResponse
+  sealed trait JobStoreWriterResponse
+  case class JobStoreWriteSuccess(originalCommand: JobStoreWriterCommand) extends JobStoreWriterResponse
+  case class JobStoreWriteFailure(originalCommand: JobStoreWriterCommand, reason: Throwable) extends JobStoreWriterResponse
 
-  sealed trait JobStoreReaderServiceCommand extends JobStoreCommand
+  sealed trait JobStoreReaderCommand extends JobStoreCommand
   /**
     * Message to query the JobStoreReaderActor, asks whether the specified job has already been completed.
     */
-  case class QueryJobCompletion(workflowId: WorkflowId, jobKey: BackendJobDescriptorKey) extends JobStoreReaderServiceCommand
+  case class QueryJobCompletion(workflowId: WorkflowId, jobKey: BackendJobDescriptorKey) extends JobStoreReaderCommand
 
   sealed trait JobStoreReaderResponse
   /**
