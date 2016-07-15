@@ -20,6 +20,7 @@ class JobStoreWriterSpec extends CromwellTestkitSpec with Matchers with BeforeAn
   before {
     database = WriteCountingJobStoreDatabase.makeNew
     jobStoreWriter = system.actorOf(JobStoreWriterActor.props(database))
+    workflowId = WorkflowId.randomId()
   }
 
   private def registerCompletions(attempts: Int): Unit = {
