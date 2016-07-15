@@ -112,7 +112,7 @@ class EngineJobExecutionActorSpec extends CromwellTestkitSpec with Matchers with
       task.declarations returns Seq.empty
 
       val jobKey = BackendJobDescriptorKey(Call(None, "wf.call", task, Set.empty, Map.empty, None), None, 1)
-      ejea ! EngineJobExecutionActor.Execute(jobKey)
+      ejea ! EngineJobExecutionActor.Execute
 
       backendProbe.expectMsg(awaitTimeout, RecoverJobCommand)
 
@@ -126,7 +126,7 @@ class EngineJobExecutionActorSpec extends CromwellTestkitSpec with Matchers with
       task.declarations returns Seq.empty
 
       val jobKey = BackendJobDescriptorKey(Call(None, "wf.call", task, Set.empty, Map.empty, None), None, 1)
-      ejea ! EngineJobExecutionActor.Execute(jobKey)
+      ejea ! EngineJobExecutionActor.Execute
 
       backendProbe.expectMsg(awaitTimeout, ExecuteJobCommand)
 

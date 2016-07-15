@@ -11,7 +11,7 @@ import wdl4s.values._
 
 class JobResultSpec extends FlatSpec with Matchers {
 
-  behavior of "JobResultJsonWriter"
+  behavior of "JobResult Json Serialization/Deserialization"
 
   it should "write and read JSON for Job successes" in {
 

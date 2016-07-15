@@ -20,7 +20,7 @@ object EngineJobExecutionActor {
 
   /** Commands */
   sealed trait EngineJobExecutionActorCommand
-  final case class Execute(jobKey: BackendJobDescriptorKey) extends EngineJobExecutionActorCommand
+  case object Execute extends EngineJobExecutionActorCommand
 
   final case class JobRunning(jobDescriptor: BackendJobDescriptor, backendJobExecutionActor: ActorRef)
 
@@ -30,7 +30,7 @@ object EngineJobExecutionActor {
   }
 }
 
-class EngineJobExecutionActor(jobDescriptorKey: BackendJobDescriptorKey,
+class EngineJobExecutionActor(jobKey: BackendJobDescriptorKey,
                               executionData: WorkflowExecutionActorData,
                               factory: BackendLifecycleActorFactory,
                               initializationData: Option[BackendInitializationData],
@@ -41,9 +41,10 @@ class EngineJobExecutionActor(jobDescriptorKey: BackendJobDescriptorKey,
   startWith(Pending, ())
 
   when(Pending) {
-    case Event(Execute(jobKey), _) =>
+    case Event(Execute, _) =>
       if (restarting) {
-        serviceRegistryActor ! QueryJobCompletion(jobKey.toJobStoreKey(workflowId))
+        val jobStoreKey = jobKey.toJobStoreKey(workflowId)
+        serviceRegistryActor ! QueryJobCompletion(jobStoreKey)
         goto(CheckingJobStatus)
       } else {
         prepareJob(jobKey)
@@ -52,15 +53,15 @@ class EngineJobExecutionActor(jobDescriptorKey: BackendJobDescriptorKey,
 
   when(CheckingJobStatus) {
     case Event(JobNotComplete(_), _) =>
-      prepareJob(jobDescriptorKey)
+      prepareJob(jobKey)
     case Event(JobComplete(_, jobResult), _) =>
       jobResult match {
         case JobResultSuccess(returnCode, jobOutputs) =>
-          context.parent ! SucceededResponse(jobDescriptorKey, returnCode, jobOutputs)
+          context.parent ! SucceededResponse(jobKey, returnCode, jobOutputs)
           context stop self
           stay()
         case JobResultFailure(returnCode, reason) =>
-          context.parent ! FailedNonRetryableResponse(jobDescriptorKey, reason, returnCode)
+          context.parent ! FailedNonRetryableResponse(jobKey, reason, returnCode)
           context stop self
           stay()
       }

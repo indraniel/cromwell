@@ -23,7 +23,7 @@ class JobStoreServiceSpec extends CromwellTestkitSpec with Matchers with Mockito
 
   "JobStoreService" should {
     "work" in {
-      val config = ConfigFactory.load("{}")
+      val config = ConfigFactory.parseString("{}")
       val jobStoreService = system.actorOf(Props(JobStoreService(config, config)))
 
       val workflowId = WorkflowId.randomId()
@@ -45,7 +45,7 @@ class JobStoreServiceSpec extends CromwellTestkitSpec with Matchers with Mockito
 
       jobStoreService ! QueryJobCompletion(successKey)
       expectMsgPF(MaxWait) {
-        case JobComplete(_, JobResultSuccess(Some(0), os)) if os == outputs =>
+        case ok @ JobComplete(_, JobResultSuccess(Some(0), os)) if os == outputs =>
       }
 
       val failureCall = mock[Call]
@@ -64,7 +64,7 @@ class JobStoreServiceSpec extends CromwellTestkitSpec with Matchers with Mockito
 
       jobStoreService ! QueryJobCompletion(failureKey)
       expectMsgPF(MaxWait) {
-        case JobComplete(_, JobResultFailure(Some(11), _)) =>
+        case ok @ JobComplete(_, JobResultFailure(Some(11), _)) =>
       }
 
       jobStoreService ! RegisterWorkflowCompleted(workflowId)

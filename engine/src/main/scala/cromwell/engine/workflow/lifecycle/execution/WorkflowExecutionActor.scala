@@ -575,7 +575,7 @@ final case class WorkflowExecutionActor(workflowId: WorkflowId,
             val ejeActor = context.actorOf(EngineJobExecutionActor.props(jobKey, data, factory, initializationData.get(backendName), restarting), ejeActorName)
             pushNewJobMetadata(jobKey, backendName)
 
-            ejeActor ! EngineJobExecutionActor.Execute(jobKey)
+            ejeActor ! EngineJobExecutionActor.Execute
 
             Success(WorkflowExecutionDiff(Map(jobKey -> ExecutionStatus.Starting)))
           case None =>
