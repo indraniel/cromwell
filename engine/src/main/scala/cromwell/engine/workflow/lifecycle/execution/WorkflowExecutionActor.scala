@@ -21,13 +21,12 @@ import cromwell.engine.workflow.lifecycle.execution.EngineJobExecutionActor.JobR
 import cromwell.engine.workflow.lifecycle.execution.JobPreparationActor.BackendJobPreparationFailed
 import cromwell.engine.workflow.lifecycle.execution.WorkflowExecutionActor.WorkflowExecutionActorState
 import cromwell.engine.workflow.lifecycle.{EngineLifecycleActorAbortCommand, EngineLifecycleActorAbortedResponse}
-import cromwell.jobstore.{JobResultFailure, JobResultSuccess, JobStoreKey}
 import cromwell.jobstore.JobStoreService.RegisterJobCompleted
+import cromwell.jobstore.{JobResultFailure, JobResultSuccess, _}
 import cromwell.services.MetadataServiceActor._
 import cromwell.services._
 import lenthall.exception.ThrowableAggregation
-import wdl4s.Scope
-import wdl4s._
+import wdl4s.{Scope, _}
 import wdl4s.types.WdlArrayType
 import wdl4s.util.TryUtil
 import wdl4s.values.{WdlArray, WdlValue}
@@ -462,18 +461,14 @@ final case class WorkflowExecutionActor(workflowId: WorkflowId,
     }
   }
 
-  private def pushRunningJobMetadata(jobKey: JobKey) = {
-    serviceRegistryActor ! PutMetadataAction(MetadataEvent(metadataKey(jobKey, CallMetadataKeys.ExecutionStatus), MetadataValue(ExecutionStatus.Running)))
-  }
-
   private def saveSuccessfulJobResults(jobKey: JobKey, returnCode: Option[Int], outputs: JobOutputs) = {
-    val jobStoreKey = JobStoreKey(workflowId, jobKey.scope.fullyQualifiedName, jobKey.index, jobKey.attempt)
+    val jobStoreKey = jobKey.toJobStoreKey(workflowId)
     val jobStoreResult = JobResultSuccess(returnCode, outputs)
     serviceRegistryActor ! RegisterJobCompleted(jobStoreKey, jobStoreResult)
   }
 
   private def saveUnsuccessfulJobResults(jobKey: JobKey, returnCode: Option[Int], reason: Throwable) = {
-    val jobStoreKey = JobStoreKey(workflowId, jobKey.scope.fullyQualifiedName, jobKey.index, jobKey.attempt)
+    val jobStoreKey = jobKey.toJobStoreKey(workflowId)
     val jobStoreResult = JobResultFailure(returnCode, reason)
     serviceRegistryActor ! RegisterJobCompleted(jobStoreKey, jobStoreResult)
   }
