@@ -24,13 +24,14 @@ object EngineJobExecutionActor {
 
   final case class JobRunning(jobDescriptor: BackendJobDescriptor, backendJobExecutionActor: ActorRef)
 
-  def props(executionData: WorkflowExecutionActorData, factory: BackendLifecycleActorFactory,
+  def props(jobDescriptorKey: BackendJobDescriptorKey, executionData: WorkflowExecutionActorData, factory: BackendLifecycleActorFactory,
             initializationData: Option[BackendInitializationData], restarting: Boolean) = {
-    Props(new EngineJobExecutionActor(executionData, factory, initializationData, restarting)).withDispatcher("akka.dispatchers.engine-dispatcher")
+    Props(new EngineJobExecutionActor(jobDescriptorKey, executionData, factory, initializationData, restarting)).withDispatcher("akka.dispatchers.engine-dispatcher")
   }
 }
 
-class EngineJobExecutionActor(executionData: WorkflowExecutionActorData,
+class EngineJobExecutionActor(jobDescriptorKey: BackendJobDescriptorKey,
+                              executionData: WorkflowExecutionActorData,
                               factory: BackendLifecycleActorFactory,
                               initializationData: Option[BackendInitializationData],
                               restarting: Boolean) extends LoggingFSM[EngineJobExecutionActorState, Unit] with WorkflowLogging with ServiceRegistryClient {
@@ -42,7 +43,7 @@ class EngineJobExecutionActor(executionData: WorkflowExecutionActorData,
   when(Pending) {
     case Event(Execute(jobKey), _) =>
       if (restarting) {
-        serviceRegistryActor ! QueryJobCompletion(workflowId, jobKey)
+        serviceRegistryActor ! QueryJobCompletion(jobKey.toJobStoreKey(workflowId))
         goto(CheckingJobStatus)
       } else {
         prepareJob(jobKey)
@@ -50,16 +51,16 @@ class EngineJobExecutionActor(executionData: WorkflowExecutionActorData,
   }
 
   when(CheckingJobStatus) {
-    case Event(JobNotComplete(jobKey), _) =>
-      prepareJob(jobKey)
-    case Event(JobComplete(jobKey, jobResult), _) =>
+    case Event(JobNotComplete(_), _) =>
+      prepareJob(jobDescriptorKey)
+    case Event(JobComplete(_, jobResult), _) =>
       jobResult match {
         case JobResultSuccess(returnCode, jobOutputs) =>
-          context.parent ! SucceededResponse(jobKey, returnCode, jobOutputs)
+          context.parent ! SucceededResponse(jobDescriptorKey, returnCode, jobOutputs)
           context stop self
           stay()
         case JobResultFailure(returnCode, reason) =>
-          context.parent ! FailedNonRetryableResponse(jobKey, reason, returnCode)
+          context.parent ! FailedNonRetryableResponse(jobDescriptorKey, reason, returnCode)
           context stop self
           stay()
       }

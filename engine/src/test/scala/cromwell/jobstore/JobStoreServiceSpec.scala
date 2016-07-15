@@ -29,40 +29,40 @@ class JobStoreServiceSpec extends CromwellTestkitSpec with Matchers with Mockito
       val workflowId = WorkflowId.randomId()
       val successCall = mock[Call]
       successCall.fullyQualifiedName returns "foo.bar"
-      val successKey = BackendJobDescriptorKey(successCall, None, 1)
+      val successKey = BackendJobDescriptorKey(successCall, None, 1).toJobStoreKey(workflowId)
 
-      jobStoreService ! QueryJobCompletion(workflowId, successKey)
+      jobStoreService ! QueryJobCompletion(successKey)
       expectMsgPF(MaxWait) {
         case ok: JobNotComplete =>
       }
 
       val outputs = Map("baz" -> JobOutput(WdlString("qux")))
 
-      jobStoreService ! RegisterJobCompleted(successKey.toJobStoreKey(workflowId), JobResultSuccess(Option(0), outputs))
+      jobStoreService ! RegisterJobCompleted(successKey, JobResultSuccess(Option(0), outputs))
       expectMsgPF(MaxWait) {
         case ok: JobStoreWriteSuccess =>
       }
 
-      jobStoreService ! QueryJobCompletion(workflowId, successKey)
+      jobStoreService ! QueryJobCompletion(successKey)
       expectMsgPF(MaxWait) {
         case JobComplete(_, JobResultSuccess(Some(0), os)) if os == outputs =>
       }
 
       val failureCall = mock[Call]
       failureCall.fullyQualifiedName returns "baz.qux"
-      val failureKey = BackendJobDescriptorKey(failureCall, None, 1)
+      val failureKey = BackendJobDescriptorKey(failureCall, None, 1).toJobStoreKey(workflowId)
 
-      jobStoreService ! QueryJobCompletion(workflowId, failureKey)
+      jobStoreService ! QueryJobCompletion(failureKey)
       expectMsgPF(MaxWait) {
         case ok: JobNotComplete =>
       }
 
-      jobStoreService ! RegisterJobCompleted(failureKey.toJobStoreKey(workflowId), JobResultFailure(Option(11), new IllegalArgumentException("Insufficient funds")))
+      jobStoreService ! RegisterJobCompleted(failureKey, JobResultFailure(Option(11), new IllegalArgumentException("Insufficient funds")))
       expectMsgPF(MaxWait) {
         case ok: JobStoreWriteSuccess =>
       }
 
-      jobStoreService ! QueryJobCompletion(workflowId, failureKey)
+      jobStoreService ! QueryJobCompletion(failureKey)
       expectMsgPF(MaxWait) {
         case JobComplete(_, JobResultFailure(Some(11), _)) =>
       }

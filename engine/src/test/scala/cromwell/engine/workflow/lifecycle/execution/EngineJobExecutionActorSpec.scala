@@ -10,12 +10,13 @@ import cromwell.engine.workflow.WorkflowDescriptorBuilder
 import cromwell.engine.workflow.lifecycle.execution.EngineJobExecutionActor._
 import cromwell.engine.workflow.lifecycle.execution.JobPreparationActor.BackendJobPreparationFailed
 import cromwell.jobstore.JobStoreService.{JobComplete, JobNotComplete}
-import cromwell.jobstore.{JobResultFailure, JobResultSuccess}
+import cromwell.jobstore.{JobResultFailure, JobResultSuccess, JobStoreKey}
 import cromwell.util.SampleWdl
 import org.scalatest.{BeforeAndAfterAll, Matchers}
 import org.specs2.mock.Mockito
 import wdl4s.expression.{NoFunctions, WdlStandardLibraryFunctions}
 import wdl4s.{Call, Task}
+import cromwell.jobstore.{Pending => _, _}
 
 class EngineJobExecutionActorSpec extends CromwellTestkitSpec with Matchers with WorkflowDescriptorBuilder with Mockito with BeforeAndAfterAll {
 
@@ -38,12 +39,18 @@ class EngineJobExecutionActorSpec extends CromwellTestkitSpec with Matchers with
     }
   }
 
-  def buildEJEA(restarting: Boolean) = new TestFSMRef[EngineJobExecutionActorState, Unit, EngineJobExecutionActor](system, EngineJobExecutionActor.props(
-    WorkflowExecutionActorData(descriptor, ExecutionStore(Map.empty), Map.empty, OutputStore(Map.empty)),
-    factory,
-    None,
-    restarting = restarting
-  ), ejeaParent.ref, s"EngineJobExecutionActorSpec-$workflowId")
+  def buildEJEA(restarting: Boolean) = {
+    val task = mock[Task]
+    task.declarations returns Seq.empty
+
+    new TestFSMRef[EngineJobExecutionActorState, Unit, EngineJobExecutionActor](system, EngineJobExecutionActor.props(
+      BackendJobDescriptorKey(Call(None, "foo.bar", task, Set.empty, Map.empty, None), None, 1),
+      WorkflowExecutionActorData(descriptor, ExecutionStore(Map.empty), Map.empty, OutputStore(Map.empty)),
+      factory,
+      None,
+      restarting = restarting
+    ), ejeaParent.ref, s"EngineJobExecutionActorSpec-$workflowId")
+  }
 
   "EngineJobExecutionActorSpec" should {
     "send a Job SucceededResponse if the job is already complete and successful" in {
@@ -52,7 +59,7 @@ class EngineJobExecutionActorSpec extends CromwellTestkitSpec with Matchers with
       val returnCode: Option[Int] = Option(0)
       val jobOutputs: JobOutputs = Map.empty
 
-      ejea ! JobComplete(mock[BackendJobDescriptorKey], JobResultSuccess(returnCode, jobOutputs))
+      ejea ! JobComplete(mock[JobStoreKey], JobResultSuccess(returnCode, jobOutputs))
 
       ejeaParent.expectMsgPF(awaitTimeout) {
         case response: SucceededResponse =>
@@ -69,7 +76,7 @@ class EngineJobExecutionActorSpec extends CromwellTestkitSpec with Matchers with
       val returnCode: Option[Int] = Option(1)
       val reason: Throwable = new Exception("something horrible happened...")
 
-      ejea ! JobComplete(mock[BackendJobDescriptorKey], JobResultFailure(returnCode, reason))
+      ejea ! JobComplete(mock[JobStoreKey], JobResultFailure(returnCode, reason))
 
       ejeaParent.expectMsgPF(awaitTimeout) {
         case response: FailedNonRetryableResponse =>
@@ -86,8 +93,10 @@ class EngineJobExecutionActorSpec extends CromwellTestkitSpec with Matchers with
       val task = mock[Task]
       task.declarations returns Seq.empty
 
-      val jobKey = BackendJobDescriptorKey(Call(None, "wf.call", task, Set.empty, Map.empty, None), None, 1)
-      ejea ! JobNotComplete(jobKey)
+      val call = Call(None, "wf.call", task, Set.empty, Map.empty, None)
+
+      val jobKey = BackendJobDescriptorKey(call, None, 1)
+      ejea ! JobNotComplete(jobKey.toJobStoreKey(WorkflowId.randomId()))
 
       backendProbe.expectMsg(awaitTimeout, RecoverJobCommand)
 

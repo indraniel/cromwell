@@ -1,6 +1,5 @@
 package cromwell
 
-import cromwell.backend.BackendJobDescriptorKey
 import cromwell.core.{JobKey, JobOutput, JobOutputs, WorkflowId}
 import cromwell.webservice.WdlValueJsonFormatter.WdlValueJsonFormat
 import spray.json.{DefaultJsonProtocol, JsValue, RootJsonFormat, _}

@@ -2,7 +2,6 @@ package cromwell.jobstore
 
 import akka.actor.Actor
 import com.typesafe.config.Config
-import cromwell.backend.BackendJobDescriptorKey
 import cromwell.core.WorkflowId
 import cromwell.jobstore.JobStoreService.{JobStoreReaderCommand, JobStoreWriterCommand}
 import cromwell.services.ServiceRegistryActor.ServiceRegistryMessage
@@ -41,18 +40,18 @@ object JobStoreService {
   /**
     * Message to query the JobStoreReaderActor, asks whether the specified job has already been completed.
     */
-  case class QueryJobCompletion(workflowId: WorkflowId, jobKey: BackendJobDescriptorKey) extends JobStoreReaderCommand
+  case class QueryJobCompletion(jobKey: JobStoreKey) extends JobStoreReaderCommand
 
   sealed trait JobStoreReaderResponse
   /**
     * Message which indicates that a job has already completed, and contains the results of the job
     */
-  case class JobComplete(jobKey: BackendJobDescriptorKey, jobResult: JobResult) extends JobStoreReaderResponse
+  case class JobComplete(jobKey: JobStoreKey, jobResult: JobResult) extends JobStoreReaderResponse
   /**
     * Indicates that the job has not been completed yet. Makes no statement about whether the job is
     * running versus unstarted or (maybe?) doesn't even exist!
     */
-  case class JobNotComplete(jobKey: BackendJobDescriptorKey) extends JobStoreReaderResponse
+  case class JobNotComplete(jobKey: JobStoreKey) extends JobStoreReaderResponse
 
-  case class JobStoreReadFailure(jobDescriptorKey: BackendJobDescriptorKey, reason: Throwable) extends JobStoreReaderResponse
+  case class JobStoreReadFailure(jobKey: JobStoreKey, reason: Throwable) extends JobStoreReaderResponse
 }
