@@ -10,6 +10,7 @@ import better.files._
 import com.typesafe.config.ConfigFactory
 import cromwell.CromwellTestkitSpec
 import cromwell.CromwellTestkitSpec._
+import cromwell.core.WorkflowSourceFiles
 import cromwell.engine.workflow.SingleWorkflowRunnerActor.RunWorkflow
 import cromwell.engine.workflow.SingleWorkflowRunnerActorSpec._
 import cromwell.util.SampleWdl
@@ -41,6 +42,12 @@ object SingleWorkflowRunnerActorSpec {
     def toStringValue = jsValue.get.asInstanceOf[JsString].value
     def toFields = jsValue.get.asJsObject.fields
   }
+
+  class TestSingleWorkflowRunnerActor(source: WorkflowSourceFiles,
+                                      metadataOutputPath: Option[Path])
+    extends SingleWorkflowRunnerActor(source, metadataOutputPath) {
+    override lazy val serviceRegistryActor = CromwellTestkitSpec.ServiceRegistryActorInstance
+  }
 }
 
 abstract class SingleWorkflowRunnerActorSpec extends CromwellTestkitSpec {
@@ -52,7 +59,7 @@ abstract class SingleWorkflowRunnerActorSpec extends CromwellTestkitSpec {
   
   def createRunnerActor(sampleWdl: SampleWdl = ThreeStep, managerActor: => ActorRef = workflowManagerActor(),
                           outputFile: => Option[Path] = None): ActorRef = {
-    system.actorOf(SingleWorkflowRunnerActor.props(sampleWdl.asWorkflowSources(), outputFile))
+    system.actorOf(Props(new TestSingleWorkflowRunnerActor(sampleWdl.asWorkflowSources(), outputFile)))
   }
 
   def singleWorkflowActor(sampleWdl: SampleWdl = ThreeStep, managerActor: => ActorRef = workflowManagerActor(),

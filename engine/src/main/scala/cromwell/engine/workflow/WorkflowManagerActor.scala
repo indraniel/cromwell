@@ -3,6 +3,7 @@ package cromwell.engine.workflow
 import akka.actor.FSM.{CurrentState, SubscribeTransitionCallBack, Transition}
 import akka.actor._
 import akka.event.Logging
+import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
 import cromwell.core.WorkflowId
 import cromwell.engine._
@@ -77,10 +78,11 @@ class WorkflowManagerActor(config: Config,
                            val workflowStore: ActorRef,
                            val serviceRegistryActor: ActorRef,
                            val workflowLogCopyRouter: ActorRef)
-  extends LoggingFSM[WorkflowManagerState, WorkflowManagerData] with CromwellActor {
+  extends LoggingFSM[WorkflowManagerState, WorkflowManagerData] {
 
   def this(workflowStore: ActorRef, serviceRegistryActor: ActorRef, workflowLogCopyRouter: ActorRef) = this(ConfigFactory.load, workflowStore, serviceRegistryActor, workflowLogCopyRouter)
   implicit val actorSystem = context.system
+  private implicit val timeout = Timeout(5 seconds)
 
   private val maxWorkflowsRunning = config.getConfig("system").getIntOr("max-concurrent-workflows", default=DefaultMaxWorkflowsToRun)
   private val maxWorkflowsToLaunch = config.getConfig("system").getIntOr("max-workflow-launch-count", default=DefaultMaxWorkflowsToLaunch)

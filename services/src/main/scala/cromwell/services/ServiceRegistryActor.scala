@@ -60,7 +60,9 @@ case class ServiceRegistryActor(globalConfig: Config) extends Actor with ActorLo
     * the error up the chain
     */
   override val supervisorStrategy = OneForOneStrategy() {
-    case _: ActorInitializationException => Escalate
+    case _: ActorInitializationException =>
+      println("OMG NOOOOOOOOOO!")
+      Escalate
     case t => super.supervisorStrategy.decider.applyOrElse(t, (_: Any) => Escalate)
   }
 }

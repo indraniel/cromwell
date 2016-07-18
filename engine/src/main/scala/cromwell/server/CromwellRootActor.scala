@@ -22,15 +22,15 @@ import cromwell.services.ServiceRegistryActor
  abstract class CromwellRootActor extends Actor {
   private val logger = Logging(context.system, this)
 
-  val serviceRegistryActor = context.actorOf(ServiceRegistryActor.props(ConfigFactory.load()), "ServiceRegistryActor")
+  lazy val serviceRegistryActor = context.actorOf(ServiceRegistryActor.props(ConfigFactory.load()), "ServiceRegistryActor")
 
-  val workflowLogCopyRouter: ActorRef = context.actorOf(RoundRobinPool(10) // FIXME: get the config stuff here
+  lazy val workflowLogCopyRouter: ActorRef = context.actorOf(RoundRobinPool(10) // FIXME: get the config stuff here
       .withSupervisorStrategy(CopyWorkflowLogsActor.strategy)
       .props(CopyWorkflowLogsActor.props(serviceRegistryActor).withDispatcher("akka.dispatchers.slow-actor-dispatcher")),
       "WorkflowLogCopyRouter")
 
-  val workflowStoreActor = context.actorOf(WorkflowStoreActor.props(serviceRegistryActor), "WorkflowStoreActor")
-  val workflowManagerActor = context.actorOf(WorkflowManagerActor.props(workflowStoreActor, serviceRegistryActor, workflowLogCopyRouter), "WorkflowManagerActor")
+  lazy val workflowStoreActor = context.actorOf(WorkflowStoreActor.props(serviceRegistryActor), "WorkflowStoreActor")
+  lazy val workflowManagerActor = context.actorOf(WorkflowManagerActor.props(workflowStoreActor, serviceRegistryActor, workflowLogCopyRouter), "WorkflowManagerActor")
 
   override def receive = {
     case _ => logger.error("CromwellRootActor is receiving a message. It prefers to be left alone!")

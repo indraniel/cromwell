@@ -17,7 +17,7 @@ import cromwell.engine.workflow.WorkflowManagerActor.RetrieveNewWorkflows
 import cromwell.engine.workflow.{WorkflowManagerActor, WorkflowStoreActor}
 import cromwell.engine.workflow.WorkflowStore.{Submitted, WorkflowToStart}
 import cromwell.engine.workflow.WorkflowStoreActor.WorkflowSubmittedToStore
-import cromwell.server.CromwellSystem
+import cromwell.server.{CromwellRootActor, CromwellSystem}
 import cromwell.services.{MetadataQuery, ServiceRegistryActor}
 import cromwell.services.MetadataServiceActor._
 import cromwell.util.SampleWdl
@@ -177,16 +177,6 @@ object CromwellTestkitSpec {
     * the actual value was.
     */
   lazy val AnyValueIsFine: WdlValue = WdlString("Today you are you! That is truer than true! There is no one alive who is you-er than you!")
-
-  implicit class EnhancedWorkflowManagerActor(val manager: TestActorRef[WorkflowManagerActor]) extends AnyVal {
-    def submit(sources: WorkflowSourceFiles): WorkflowId = {
-      val submitMessage = WorkflowStoreActor.SubmitWorkflow(sources)
-      val result = Await.result(manager.underlyingActor.workflowStore.ask(submitMessage)(TimeoutDuration), Duration.Inf).asInstanceOf[WorkflowSubmittedToStore].workflowId
-      manager ! RetrieveNewWorkflows
-      result
-    }
-  }
-
   lazy val DefaultConfig = ConfigFactory.load
   lazy val DefaultLocalBackendConfig = ConfigFactory.parseString(
     """
@@ -251,6 +241,24 @@ object CromwellTestkitSpec {
     lifecycleActorFactoryClass = "cromwell.backend.impl.jes.JesBackendLifecycleActorFactory",
     JesBackendConfig
   )
+
+  // FIXME: Need a comment here
+  private val ServiceRegistryActorSystem = akka.actor.ActorSystem("cromwell-service-registry-system")
+    val ServiceRegistryActorInstance = {
+      println("I AM MAKING THIS BASTARD")
+      ServiceRegistryActorSystem.actorOf(ServiceRegistryActor.props(ConfigFactory.load()), "ServiceRegistryActor")
+    }
+
+    class TestCromwellRootActor(config: Config) extends CromwellRootActor {
+      override lazy val serviceRegistryActor = ServiceRegistryActorInstance
+
+      def submitWorkflow(sources: WorkflowSourceFiles): WorkflowId = {
+        val submitMessage = WorkflowStoreActor.SubmitWorkflow(sources)
+        val result = Await.result(workflowStoreActor.ask(submitMessage)(TimeoutDuration), Duration.Inf).asInstanceOf[WorkflowSubmittedToStore].workflowId
+        workflowManagerActor ! RetrieveNewWorkflows
+        result
+      }
+    }
 }
 
 abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestWorkflowManagerSystem().actorSystem)
@@ -347,10 +355,8 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
     }
   }
 
-  private def buildWorkflowManagerActorForRunningFullWdlTests(config: Config) = {
-    val serviceRegistryActor = system.actorOf(ServiceRegistryActor.props(config))
-    val workflowStore = system.actorOf(WorkflowStoreActor.props(serviceRegistryActor))
-    TestActorRef(new WorkflowManagerActor(config, workflowStore, serviceRegistryActor, dummyLogCopyRouter), name = "WorkflowManagerActor")
+  private def buildCromwellRootActor(config: Config) = {
+    TestActorRef(new TestCromwellRootActor(config), name = "TestCromwellRootActor")
   }
 
   def workflowSuccessFilter = EventFilter.info(pattern = "transition from FinalizingWorkflowState to WorkflowSucceededState", occurrences = 1)
@@ -361,15 +367,17 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
              workflowOptions: String = "{}",
              terminalState: WorkflowState = WorkflowSucceeded,
              config: Config = DefaultConfig)(implicit ec: ExecutionContext): Map[FullyQualifiedName, WdlValue] = {
-    val wma = buildWorkflowManagerActorForRunningFullWdlTests(config)
+    val rootActor = buildCromwellRootActor(config)
     val sources = WorkflowSourceFiles(sampleWdl.wdlSource(runtime), sampleWdl.wdlJson, workflowOptions)
     eventFilter.intercept {
       within(TimeoutDuration) {
-        val workflowId = wma.submit(sources)
-        verifyWorkflowState(wma, wma.underlyingActor.serviceRegistryActor, workflowId, terminalState)
-        getWorkflowOutputsFromMetadata(workflowId, wma.underlyingActor.serviceRegistryActor)
+        val workflowId = rootActor.underlyingActor.submitWorkflow(sources)
+        verifyWorkflowState(rootActor.underlyingActor.serviceRegistryActor, workflowId, terminalState)
+        getWorkflowOutputsFromMetadata(workflowId, rootActor.underlyingActor.serviceRegistryActor)
       }
     }
+
+    // FIXME: Stop rootActor
   }
 
   def eventually[T](isFatal: Throwable => Boolean, maxRetries: Int = 3)(f: => T): T = {
@@ -388,10 +396,9 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
                              workflowOptions: String = "{}",
                              allowOtherOutputs: Boolean = true,
                              terminalState: WorkflowState = WorkflowSucceeded,
-                             config: Config = DefaultConfig,
-                             workflowManagerActor: Option[TestActorRef[WorkflowManagerActor]] = None)
+                             config: Config = DefaultConfig)
                             (implicit ec: ExecutionContext): WorkflowId = {
-    val workflowManager = workflowManagerActor.getOrElse(buildWorkflowManagerActorForRunningFullWdlTests(config))
+    val rootActor = buildCromwellRootActor(config)
     val sources = sampleWdl.asWorkflowSources(runtime, workflowOptions)
     def isFatal(e: Throwable) = e match {
       case _: OutputNotFoundException => false
@@ -399,11 +406,11 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
     }
     val id = eventFilter.intercept {
       within(TimeoutDuration) {
-        val workflowId = workflowManager.submit(sources)
-        verifyWorkflowState(workflowManager, workflowManager.underlyingActor.serviceRegistryActor, workflowId, terminalState)
+        val workflowId = rootActor.underlyingActor.submitWorkflow(sources)
+        verifyWorkflowState(rootActor.underlyingActor.serviceRegistryActor, workflowId, terminalState)
 
         eventually(isFatal) {
-          val outputs = getWorkflowOutputsFromMetadata(workflowId, workflowManager.underlyingActor.serviceRegistryActor)
+          val outputs = getWorkflowOutputsFromMetadata(workflowId, rootActor.underlyingActor.serviceRegistryActor)
           val actualOutputNames = outputs.keys mkString ", "
           val expectedOutputNames = expectedOutputs.keys mkString " "
 
@@ -422,7 +429,7 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
       }
     }
 
-    if (workflowManagerActor.isEmpty) system.stop(workflowManager)
+    system.stop(rootActor)
     id
   }
 
@@ -434,10 +441,9 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
                           workflowOptions: String = "{}",
                           allowOtherOutputs: Boolean = true,
                           terminalState: WorkflowState = WorkflowSucceeded,
-                          config: Config = DefaultConfig,
-                          workflowManagerActor: Option[TestActorRef[WorkflowManagerActor]] = None)
+                          config: Config = DefaultConfig)
                          (implicit ec: ExecutionContext): WorkflowId = {
-    val workflowManager = workflowManagerActor.getOrElse(buildWorkflowManagerActorForRunningFullWdlTests(config))
+    val rootActor = buildCromwellRootActor(config)
     val sources = sampleWdl.asWorkflowSources(runtime, workflowOptions)
     def isFatal(e: Throwable) = e match {
       case _: LogNotFoundException => false
@@ -445,18 +451,20 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
     }
     eventFilter.intercept {
       within(TimeoutDuration) {
-        val workflowId = workflowManager.submit(sources)
-        verifyWorkflowState(workflowManager, workflowManager.underlyingActor.serviceRegistryActor, workflowId, terminalState)
+        val workflowId = rootActor.underlyingActor.submitWorkflow(sources)
+        verifyWorkflowState(rootActor.underlyingActor.serviceRegistryActor, workflowId, terminalState)
 
         eventually(isFatal) {
           import better.files._
-          val (stdout, stderr) = getFirstCallLogs(workflowId, workflowManager.underlyingActor.serviceRegistryActor)
+          val (stdout, stderr) = getFirstCallLogs(workflowId, rootActor.underlyingActor.serviceRegistryActor)
           Paths.get(stdout).contentAsString shouldBe expectedStdoutContent
           Paths.get(stderr).contentAsString shouldBe expectedStderrContent
           workflowId
         }
       }
     }
+
+    // FIXME: Stop the root
   }
 
   def getWorkflowMetadata(workflowId: WorkflowId, serviceRegistryActor: ActorRef, key: Option[String] = None)(implicit ec: ExecutionContext): JsObject = {
@@ -475,7 +483,7 @@ abstract class CromwellTestkitSpec extends TestKit(new CromwellTestkitSpec.TestW
     metadata
   }
 
-  def verifyWorkflowState(wma: ActorRef, serviceRegistryActor: ActorRef, workflowId: WorkflowId, expectedState: WorkflowState)(implicit ec: ExecutionContext): Unit = {
+  def verifyWorkflowState(serviceRegistryActor: ActorRef, workflowId: WorkflowId, expectedState: WorkflowState)(implicit ec: ExecutionContext): Unit = {
     // Continuously check the state of the workflow until it is in a terminal state
     awaitCond(getWorkflowState(workflowId, serviceRegistryActor).isTerminal)
     // Now that it's complete verify that we ended up in the state we're expecting

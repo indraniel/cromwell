@@ -6,6 +6,7 @@ import java.util.UUID
 import akka.actor.FSM.{CurrentState, Transition}
 import akka.actor._
 import akka.pattern.pipe
+import akka.util.Timeout
 import better.files._
 import cromwell.core.retry.SimpleExponentialBackoff
 import cromwell.core.{WorkflowId, ExecutionStore => _, _}
@@ -71,12 +72,13 @@ object SingleWorkflowRunnerActor {
  */
 case class SingleWorkflowRunnerActor(source: WorkflowSourceFiles,
                                      metadataOutputPath: Option[Path])
-  extends CromwellRootActor with LoggingFSM[RunnerState, RunnerData] with CromwellActor {
+  extends CromwellRootActor with LoggingFSM[RunnerState, RunnerData] {
 
   import SingleWorkflowRunnerActor._
 
   private val backoff = SimpleExponentialBackoff(1 second, 1 minute, 1.2)
   private implicit val system = context.system
+  private implicit val timeout = Timeout(5 seconds)
 
   startWith(NotStarted, RunnerData())
 
