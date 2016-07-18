@@ -8,6 +8,7 @@ import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import cromwell.CromwellSpec.PostMVP
+import cromwell.CromwellTestkitSpec
 import cromwell.core.WorkflowId
 import cromwell.database.obj.WorkflowMetadataKeys
 import cromwell.engine.workflow.WorkflowDescriptorBuilder
@@ -80,7 +81,7 @@ class CromwellApiServiceSpec extends FlatSpec with CromwellApiService with Scala
 
   override def actorRefFactory = system
   val summaryActor = system.actorOf(MetadataSummaryRefreshActor.props(None), "metadata-summary-actor")
-  override val serviceRegistryActor = system.actorOf(Props.empty) // Dummy SRA
+  override val serviceRegistryActor = CromwellTestkitSpec.ServiceRegistryActorInstance
 
   override val workflowManagerActor = actorRefFactory.actorOf(Props(new MockWorkflowManagerActor() with WorkflowDescriptorBuilder {
     override implicit  val actorSystem = context.system
