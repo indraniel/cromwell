@@ -42,6 +42,12 @@ case class ServiceRegistryActor(globalConfig: Config) extends Actor with ActorLo
     println("HELP I AM DYING")
   }
 
+  override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
+    println("I AM RESTARTING BAAHHHHH")
+    println("RESTART EXCEPTION: " + reason)
+    println("MESSAGE: " + message)
+  }
+
   val services: Map[String, ActorRef] = serviceNameToPropsMap(globalConfig) map {
     case (name, props) => name -> context.actorOf(props, name)
   }
