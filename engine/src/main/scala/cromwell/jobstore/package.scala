@@ -23,7 +23,7 @@ package object jobstore {
 
     implicit object JobOutputFormat extends RootJsonFormat[JobOutput] {
       def write(value: JobOutput) = value.wdlValue.toJson
-      def read(value: JsValue): JobOutput = JobOutput(WdlValueJsonFormat.read(value), None)
+      def read(value: JsValue): JobOutput = JobOutput(WdlValueJsonFormat.read(value))
     }
 
     implicit val JobResultSuccessFormat = jsonFormat2(JobResultSuccess)

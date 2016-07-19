@@ -15,7 +15,7 @@ class JobResultSpec extends FlatSpec with Matchers {
 
   it should "write and read JSON for Job successes" in {
 
-    val success = JobResultSuccess(Some(0), Map("abc" -> JobOutput(WdlString("hello"), None)))
+    val success = JobResultSuccess(Some(0), Map("abc" -> JobOutput(WdlString("hello"))))
     val asJson = success.toJson
 
     val jsonString = asJson.toString()
@@ -28,7 +28,7 @@ class JobResultSpec extends FlatSpec with Matchers {
   }
 
   it should "write and read more complicated WdlValues" in {
-    val success = JobResultSuccess(Some(0), Map("abc" -> JobOutput(WdlMap(WdlMapType(WdlStringType, WdlIntegerType), Map(WdlString("hello") -> WdlInteger(4), WdlString("goodbye") -> WdlInteger(6))), None)))
+    val success = JobResultSuccess(Some(0), Map("abc" -> JobOutput(WdlMap(WdlMapType(WdlStringType, WdlIntegerType), Map(WdlString("hello") -> WdlInteger(4), WdlString("goodbye") -> WdlInteger(6))))))
     val asJson = success.toJson
 
     val jsonString = asJson.toString()
