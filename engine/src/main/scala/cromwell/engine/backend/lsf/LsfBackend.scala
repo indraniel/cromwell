@@ -163,10 +163,12 @@ case class LsfBackend(actorSystem: ActorSystem) extends Backend with SharedFileS
   private def launchBsub(jobDescriptor: BackendCallJobDescriptor): (Int, Option[Int]) = {
     val logger = jobLogger(jobDescriptor)
     // Setup the default bsub options
-    val lsfOption = scala.collection.immutable.Map("-J" -> s"cromwell_${jobDescriptor.workflowDescriptor.shortId}_${jobDescriptor.call.unqualifiedName}",
+    val lsfOption = scala.collection.immutable.Map(
+            "-N" -> "",
+            "-J" -> s"cromwell_${jobDescriptor.workflowDescriptor.shortId}_${jobDescriptor.call.unqualifiedName}",
             "-cwd" -> jobDescriptor.callRootPath.toAbsolutePath,
-            "-o" -> jobDescriptor.stdout.getFileName,
-            "-e" -> jobDescriptor.stderr.getFileName) ++ (ConfigFactory.load.hasPath("backend.lsf") match {
+            "-oo" -> jobDescriptor.stdout.getFileName,
+            "-oe" -> jobDescriptor.stderr.getFileName) ++ (ConfigFactory.load.hasPath("backend.lsf") match {
       case true => ConfigFactory.load.getConfig("backend.lsf").root().unwrapped().toMap
       case false => scala.collection.immutable.Map()
     })
