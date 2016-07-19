@@ -1,6 +1,6 @@
 package cromwell.backend.io
 
-import java.nio.file.{FileSystem, Files, Path, Paths}
+import java.nio.file._
 
 import com.typesafe.config.Config
 import cromwell.core._
@@ -15,6 +15,9 @@ import scala.util.{Failure, Success, Try}
 
 object SharedFileSystem {
   import better.files._
+
+  // TODO Support GCS ?
+  val fileSystems = List(FileSystems.getDefault)
 
   final case class AttemptedLookupResult(name: String, value: Try[WdlValue]) {
     def toPair = name -> value

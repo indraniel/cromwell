@@ -4,10 +4,8 @@ import akka.actor.ActorLogging
 import akka.event.LoggingReceive
 import cromwell.backend.BackendJobExecutionActor.{FailedNonRetryableResponse, _}
 import cromwell.backend.BackendLifecycleActor._
-import cromwell.core.{JobOutput, JobOutputs}
-import wdl4s._
+import cromwell.core.JobOutputs
 import wdl4s.expression.WdlStandardLibraryFunctions
-import wdl4s.util.TryUtil
 import wdl4s.values.WdlValue
 
 import scala.concurrent.Future
@@ -39,7 +37,7 @@ trait BackendJobExecutionActor extends BackendJobLifecycleActor with ActorLoggin
     case ExecuteJobCommand => performActionThenRespond(execute, onFailure = executionFailed)
     case RecoverJobCommand => performActionThenRespond(recover, onFailure = executionFailed)
     case AbortJobCommand =>
-      abort
+      abort()
       context.parent ! AbortedResponse(jobDescriptor.key)
       context.stop(self)
   }
@@ -56,28 +54,15 @@ trait BackendJobExecutionActor extends BackendJobLifecycleActor with ActorLoggin
   /**
     * Restart or resume a previously-started job.
     */
-  def recover: Future[BackendJobExecutionResponse]
+  def recover: Future[BackendJobExecutionResponse] = execute
 
   /**
     * Abort a running job.
     */
-  def abort: Unit
+  def abort(): Unit = {}
 
   def evaluateOutputs(wdlFunctions: WdlStandardLibraryFunctions,
                       postMapper: WdlValue => Try[WdlValue] = v => Success(v)) = {
-    val inputs = jobDescriptor.inputs
-    val evaluatedOutputs = jobDescriptor.call.task.outputs.foldLeft(Map.empty[LocallyQualifiedName, Try[JobOutput]])((outputMap, output) => {
-      val currentOutputs = outputMap collect {
-        case (name, value) if value.isSuccess => name -> value.get.wdlValue
-      }
-      def lookup = (currentOutputs ++ inputs).apply _
-      val coerced = output.requiredExpression.evaluate(lookup, wdlFunctions) flatMap output.wdlType.coerceRawValue
-      val jobOutput = output.name -> (coerced flatMap postMapper map { JobOutput(_, None) })
-
-      outputMap + jobOutput
-
-    })
-
-    TryUtil.sequenceMap(evaluatedOutputs, s"Workflow ${jobDescriptor.descriptor.id} post processing failed.")
+    OutputEvaluator.evaluateOutputs(jobDescriptor, wdlFunctions, postMapper)
   }
 }

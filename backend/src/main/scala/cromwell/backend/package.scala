@@ -1,11 +1,14 @@
 package cromwell
 
+import java.util.UUID
+
 import com.typesafe.config.Config
 import cromwell.core.WorkflowOptions.WorkflowOption
 import cromwell.core.{JobKey, WorkflowId, WorkflowOptions}
 import wdl4s._
 import wdl4s.values.WdlValue
 
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.{Success, Try}
 
@@ -45,6 +48,12 @@ package object backend {
     * For passing to a BackendActor construction time
     */
   case class BackendConfigurationDescriptor(backendConfig: Config, globalConfig: Config)
+
+  object ExecutionHash {
+    // TODO: PBE: ideally hashes should be deterministic
+    def completelyRandomExecutionHash(implicit ec: ExecutionContext): Future[ExecutionHash] = Future.successful(
+      ExecutionHash(UUID.randomUUID().toString, dockerHash = None))
+  }
 
   final case class ExecutionHash(overallHash: String, dockerHash: Option[String])
 

@@ -1,33 +1,30 @@
 package cromwell.backend.impl.sge
 
-import cromwell.backend.validation.{ContinueOnReturnCodeSet, ContinueOnReturnCode}
-import cromwell.backend.validation.RuntimeAttributesKeys._
-import cromwell.backend.validation.RuntimeAttributesValidation._
-import lenthall.exception.MessageAggregation
+import cromwell.backend.sharedfilesystem.{SharedFileSystemRuntimeAttributes, SharedFileSystemRuntimeAttributesBuilder}
+import cromwell.backend.MemorySize
+import cromwell.backend.validation._
+import cromwell.core._
 import wdl4s.values.WdlValue
 
-import scalaz._
-import Scalaz._
+import scalaz.Scalaz._
 
-object SgeRuntimeAttributes {
-  val FailOnStderrDefaultValue = false
-  val ContinueOnRcDefaultValue = 0
+case class SgeRuntimeAttributes(dockerImageOption: Option[String],
+                                failOnStderr: Boolean,
+                                continueOnReturnCode: ContinueOnReturnCode,
+                                memorySizeOption: Option[MemorySize]) extends SharedFileSystemRuntimeAttributes {
+  override def asMap = super.asMap ++ optionalMap(MemoryValidation.Optional.key, memorySizeOption)
+}
 
-  def apply(attrs: Map[String, WdlValue]): SgeRuntimeAttributes = {
-    val docker = validateDocker(attrs.get(DockerKey), None.successNel)
-    val failOnStderr = validateFailOnStderr(attrs.get(FailOnStderrKey), FailOnStderrDefaultValue.successNel)
-    val continueOnReturnCode = validateContinueOnReturnCode(attrs.get(ContinueOnReturnCodeKey),
-      ContinueOnReturnCodeSet(Set(ContinueOnRcDefaultValue)).successNel)
-    (continueOnReturnCode |@| docker |@| failOnStderr) {
-      new SgeRuntimeAttributes(_, _, _)
-    } match {
-      case Success(x) => x
-      case Failure(nel) => throw new RuntimeException with MessageAggregation {
-        override def exceptionContext: String = "Runtime attribute validation failed"
-        override def errorMessages: Traversable[String] = nel.list
-      }
+object SgeRuntimeAttributesBuilder extends SharedFileSystemRuntimeAttributesBuilder[SgeRuntimeAttributes] {
+  override protected val customValidations = Seq(MemoryValidation.Optional)
+
+  override protected def validate(values: Map[String, WdlValue]): ErrorOr[SgeRuntimeAttributes] = {
+    val dockerValidationOptionErrorOr: ErrorOr[Option[String]] = DockerValidation.optional.validate(values)
+    val failOnStderrErrorOr: ErrorOr[Boolean] = FailOnStderrValidation.validate(values)
+    val continueOnReturnCodeErrorOr: ErrorOr[ContinueOnReturnCode] = ContinueOnReturnCodeValidation.validate(values)
+    val memoryErrorOr: ErrorOr[Option[MemorySize]] = MemoryValidation.Optional.validate(values)
+    (dockerValidationOptionErrorOr |@| failOnStderrErrorOr |@| continueOnReturnCodeErrorOr |@| memoryErrorOr) {
+      SgeRuntimeAttributes.apply
     }
   }
 }
-
-case class SgeRuntimeAttributes(continueOnReturnCode: ContinueOnReturnCode, dockerImage: Option[String], failOnStderr: Boolean)

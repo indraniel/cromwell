@@ -1,9 +1,13 @@
 package cromwell.backend.impl.sge
 
+import ch.qos.logback.classic.Level
 import cromwell.backend.BackendSpec
 import cromwell.backend.validation.RuntimeAttributesKeys._
 import cromwell.backend.validation.{ContinueOnReturnCode, ContinueOnReturnCodeSet}
+import cromwell.core.WorkflowOptions
+import lenthall.test.logging.TestLogger
 import org.scalatest.{Matchers, WordSpecLike}
+import org.slf4j.LoggerFactory
 import wdl4s.values.WdlValue
 
 class SgeRuntimeAttributesSpec extends WordSpecLike with Matchers {
@@ -63,6 +67,38 @@ class SgeRuntimeAttributesSpec extends WordSpecLike with Matchers {
       assertSgeRuntimeAttributesSuccessfulCreation(runtimeAttributes, expectedRuntimeAttributes)
     }
 
+    "log a warning and return an instance of itself when tries to validate a valid Docker entry" in {
+      val expectedRuntimeAttributes = defaultRuntimeAttributes + (DockerKey -> Option("ubuntu:latest"))
+      val runtimeAttributes = createRuntimeAttributes(HelloWorld, """runtime { docker: "ubuntu:latest" }""").head
+      TestLogger.withTestLoggerFor(defaultLogger) { expectedLogger =>
+        expectedLogger.setLevel(Level.WARN)
+        assertSgeRuntimeAttributesSuccessfulCreation(runtimeAttributes, expectedRuntimeAttributes,
+          supportsDocker = false)
+        expectedLogger.messages should include("[WARN] Unrecognized runtime attribute keys: docker\n")
+      }
+    }
+
+    "log a warning and return an instance of itself when tries to validate a valid Docker entry based on input" in {
+      val expectedRuntimeAttributes = defaultRuntimeAttributes + (DockerKey -> Option("you"))
+      val runtimeAttributes = createRuntimeAttributes(HelloWorld, """runtime { docker: "\${addressee}" }""").head
+      TestLogger.withTestLoggerFor(defaultLogger) { expectedLogger =>
+        expectedLogger.setLevel(Level.WARN)
+        assertSgeRuntimeAttributesSuccessfulCreation(runtimeAttributes, expectedRuntimeAttributes,
+          supportsDocker = false)
+        expectedLogger.messages should include("[WARN] Unrecognized runtime attribute keys: docker\n")
+      }
+    }
+
+    "log a warning and throw an exception when tries to validate an invalid Docker entry" in {
+      val runtimeAttributes = createRuntimeAttributes(HelloWorld, """runtime { docker: 1 }""").head
+      TestLogger.withTestLoggerFor(defaultLogger) { expectedLogger =>
+        expectedLogger.setLevel(Level.WARN)
+        assertSgeRuntimeAttributesFailedCreation(runtimeAttributes, "Expecting docker runtime attribute to be a String",
+          supportsDocker = false)
+        expectedLogger.messages should include("[WARN] Unrecognized runtime attribute keys: docker\n")
+      }
+    }
+
     "throw an exception when tries to validate an invalid failOnStderr entry" in {
       val runtimeAttributes = createRuntimeAttributes(HelloWorld, """runtime { failOnStderr: "yes" }""").head
       assertSgeRuntimeAttributesFailedCreation(runtimeAttributes, "Expecting failOnStderr runtime attribute to be a Boolean or a String with values of 'true' or 'false'")
@@ -81,20 +117,30 @@ class SgeRuntimeAttributesSpec extends WordSpecLike with Matchers {
 
   }
 
-  private def assertSgeRuntimeAttributesSuccessfulCreation(runtimeAttributes: Map[String, WdlValue], expectedRuntimeAttributes: Map[String, Any]): Unit = {
+  val defaultLogger = LoggerFactory.getLogger(classOf[SgeRuntimeAttributesSpec])
+  val emptyWorkflowOptions = WorkflowOptions.fromMap(Map.empty).get
+
+  private def assertSgeRuntimeAttributesSuccessfulCreation(runtimeAttributes: Map[String, WdlValue],
+                                                           expectedRuntimeAttributes: Map[String, Any],
+                                                           supportsDocker: Boolean = false): Unit = {
     try {
-      val sgeRuntimeAttributes = SgeRuntimeAttributes(runtimeAttributes)
-      assert(sgeRuntimeAttributes.dockerImage == expectedRuntimeAttributes.get(DockerKey).get.asInstanceOf[Option[String]])
-      assert(sgeRuntimeAttributes.failOnStderr == expectedRuntimeAttributes.get(FailOnStderrKey).get.asInstanceOf[Boolean])
-      assert(sgeRuntimeAttributes.continueOnReturnCode == expectedRuntimeAttributes.get(ContinueOnReturnCodeKey).get.asInstanceOf[ContinueOnReturnCode])
+      val sgeRuntimeAttributes = SgeRuntimeAttributesBuilder.withDockerSupport(supportsDocker).
+        build(runtimeAttributes, emptyWorkflowOptions, defaultLogger)
+      assert(sgeRuntimeAttributes.dockerImageOption ==
+        expectedRuntimeAttributes(DockerKey).asInstanceOf[Option[String]])
+      assert(sgeRuntimeAttributes.failOnStderr == expectedRuntimeAttributes(FailOnStderrKey).asInstanceOf[Boolean])
+      assert(sgeRuntimeAttributes.continueOnReturnCode ==
+        expectedRuntimeAttributes(ContinueOnReturnCodeKey).asInstanceOf[ContinueOnReturnCode])
     } catch {
       case ex: RuntimeException => fail(s"Exception was not expected but received: ${ex.getMessage}")
     }
   }
 
-  private def assertSgeRuntimeAttributesFailedCreation(runtimeAttributes: Map[String, WdlValue], exMsg: String): Unit = {
+  private def assertSgeRuntimeAttributesFailedCreation(runtimeAttributes: Map[String, WdlValue], exMsg: String,
+                                                       supportsDocker: Boolean = true): Unit = {
     try {
-      SgeRuntimeAttributes(runtimeAttributes)
+      SgeRuntimeAttributesBuilder.withDockerSupport(supportsDocker).
+        build(runtimeAttributes, emptyWorkflowOptions, defaultLogger)
       fail("A RuntimeException was expected.")
     } catch {
       case ex: RuntimeException => assert(ex.getMessage.contains(exMsg))

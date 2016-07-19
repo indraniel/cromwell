@@ -3,7 +3,6 @@ package cromwell.backend.impl.jes
 import java.net.SocketTimeoutException
 import java.nio.file.{Path, Paths}
 import java.time.OffsetDateTime
-import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, Props}
 import akka.event.LoggingReceive
@@ -18,7 +17,7 @@ import cromwell.backend.impl.jes.RunStatus.TerminalRunStatus
 import cromwell.backend.impl.jes.io._
 import cromwell.backend.{AttemptedLookupResult, BackendJobDescriptor, BackendJobDescriptorKey, BackendWorkflowDescriptor, ExecutionHash, PreemptedException}
 import cromwell.core.logging.JobLogging
-import cromwell.core.retry.{Retry, SimpleExponentialBackoff}
+import cromwell.core.retry.Retry
 import cromwell.core.{CromwellAggregatedException, JobOutput, _}
 import cromwell.filesystems.gcs.NioGcsPath
 import cromwell.services.CallMetadataKeys._
@@ -32,7 +31,6 @@ import wdl4s.expression.NoFunctions
 import wdl4s.util.TryUtil
 import wdl4s.values._
 
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -82,10 +80,6 @@ class JesAsyncBackendJobExecutionActor(override val jobDescriptor: BackendJobDes
   extends Actor with ActorLogging with AsyncBackendJobExecutionActor with ServiceRegistryClient with JobLogging {
 
   import JesAsyncBackendJobExecutionActor._
-
-  override lazy val pollBackoff = SimpleExponentialBackoff(initialInterval = 30 seconds, maxInterval = 10 minutes, multiplier = 1.1)
-
-  override lazy val executeOrRecoverBackoff = SimpleExponentialBackoff(initialInterval = 3 seconds, maxInterval = 20 seconds, multiplier = 1.1)
 
   private lazy val workflowDescriptor = jobDescriptor.descriptor
 
@@ -173,7 +167,7 @@ class JesAsyncBackendJobExecutionActor(override val jobDescriptor: BackendJobDes
     else None
   }
 
-  private val callContext = new CallContext(
+  private val callContext = CallContext(
     callRootPath,
     jesStdoutFile.toString,
     jesStderrFile.toString
@@ -612,13 +606,13 @@ class JesAsyncBackendJobExecutionActor(override val jobDescriptor: BackendJobDes
       val preemptedMsg = s"Task $taskName was preempted for the ${attempt.toOrdinal} time."
 
       if (attempt < maxPreemption) {
-        val e = new PreemptedException(
+        val e = PreemptedException(
           s"""$preemptedMsg The call will be restarted with another preemptible VM (max preemptible attempts number is $maxPreemption).
              |Error code $errorCode. Message: $errorMessage""".stripMargin
         )
         FailedRetryableExecutionHandle(e, None).future
       } else {
-        val e = new PreemptedException(
+        val e = PreemptedException(
           s"""$preemptedMsg The maximum number of preemptible attempts ($maxPreemption) has been reached. The call will be restarted with a non-preemptible VM.
              |Error code $errorCode. Message: $errorMessage)""".stripMargin)
         FailedRetryableExecutionHandle(e, None).future
@@ -628,9 +622,6 @@ class JesAsyncBackendJobExecutionActor(override val jobDescriptor: BackendJobDes
       FailedNonRetryableExecutionHandle(e, None).future
     }
   }
-
-  // PBE ideally hashes should be deterministic
-  private def completelyRandomExecutionHash: Future[ExecutionHash] = Future.successful(ExecutionHash(UUID.randomUUID().toString, dockerHash = None))
 
   private[jes] def executionResult(status: RunStatus, handle: JesPendingExecutionHandle)
                                   (implicit ec: ExecutionContext): Future[ExecutionHandle] = Future {
@@ -653,7 +644,7 @@ class JesAsyncBackendJobExecutionActor(override val jobDescriptor: BackendJobDes
         case _: RunStatus.Success if !continueOnReturnCode.continueFor(returnCode.get) =>
           FailedNonRetryableExecutionHandle(new Throwable(s"execution failed: disallowed command return code: " + returnCode.get), returnCode.toOption).future
         case _: RunStatus.Success =>
-          completelyRandomExecutionHash map { h => handleSuccess(postProcess, returnCode.get, h, handle) }
+          ExecutionHash.completelyRandomExecutionHash map { h => handleSuccess(postProcess, returnCode.get, h, handle) }
         case RunStatus.Failed(errorCode, errorMessage, _) => handleFailure(errorCode, errorMessage)
       }
     } catch {

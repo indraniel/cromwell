@@ -2,7 +2,7 @@ package cromwell.backend.io
 
 import java.nio.file.{FileSystem, Path}
 
-import cromwell.backend.{BackendConfigurationDescriptor, BackendJobDescriptorKey, BackendWorkflowDescriptor}
+import cromwell.backend.{BackendConfigurationDescriptor, BackendInitializationData, BackendJobDescriptorKey, BackendWorkflowDescriptor}
 import cromwell.backend.wdl._
 import cromwell.core.CallContext
 import wdl4s.expression.WdlStandardLibraryFunctions
@@ -13,13 +13,15 @@ import scala.util.{Success, Try}
 
 object SharedFsExpressionFunctions {
   private val LocalFSScheme = "file"
+
   def isLocalPath(path: Path) = path.toUri.getScheme == SharedFsExpressionFunctions.LocalFSScheme
+
   def apply(workflowDescriptor: BackendWorkflowDescriptor,
             jobKey: BackendJobDescriptorKey,
             configurationDescriptor: BackendConfigurationDescriptor,
             fileSystems: List[FileSystem]): SharedFsExpressionFunctions = {
     val jobPaths = new JobPaths(workflowDescriptor, configurationDescriptor.backendConfig, jobKey, None)
-    val callContext = new CallContext(
+    val callContext = CallContext(
       jobPaths.callRoot,
       jobPaths.stdout.toAbsolutePath.toString,
       jobPaths.stderr.toAbsolutePath.toString
@@ -28,7 +30,7 @@ object SharedFsExpressionFunctions {
   }
 
   def apply(jobPaths: JobPaths, fileSystems: List[FileSystem]): SharedFsExpressionFunctions = {
-    val callContext = new CallContext(
+    val callContext = CallContext(
       jobPaths.callRoot,
       jobPaths.stdout.toAbsolutePath.toString,
       jobPaths.stderr.toAbsolutePath.toString
@@ -36,6 +38,19 @@ object SharedFsExpressionFunctions {
     new SharedFsExpressionFunctions(fileSystems, callContext)
   }
 
+  def apply(workflowDescriptor: BackendWorkflowDescriptor,
+            configurationDescriptor: BackendConfigurationDescriptor,
+            jobKey: BackendJobDescriptorKey,
+            initializationData: Option[BackendInitializationData]) = {
+    val jobPaths = new JobPaths(workflowDescriptor, configurationDescriptor.backendConfig, jobKey, None)
+    val callContext = CallContext(
+      jobPaths.callRoot,
+      jobPaths.stdout.toAbsolutePath.toString,
+      jobPaths.stderr.toAbsolutePath.toString
+    )
+
+    new SharedFsExpressionFunctions(SharedFileSystem.fileSystems, callContext)
+  }
 }
 
 class SharedFsExpressionFunctions(override val fileSystems: List[FileSystem],
@@ -56,4 +71,3 @@ class SharedFsExpressionFunctions(override val fileSystems: List[FileSystem],
 
   override def postMapping(path: Path) = if (!path.isAbsolute && isLocalPath(path)) context.root.resolve(path) else path
 }
-
