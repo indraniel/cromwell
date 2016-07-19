@@ -22,7 +22,10 @@ import cromwell.services.ServiceRegistryActor
  abstract class CromwellRootActor extends Actor {
   private val logger = Logging(context.system, this)
 
-   lazy val serviceRegistryActor = context.actorOf(ServiceRegistryActor.props(ConfigFactory.load()), "ServiceRegistryActor")
+   lazy val serviceRegistryActor = {
+     println("DAFUQ?")
+     context.actorOf(ServiceRegistryActor.props(ConfigFactory.load()), "ServiceRegistryActor")
+   }
 
    val workflowLogCopyRouter: ActorRef = context.actorOf(RoundRobinPool(10) // FIXME: get the config stuff here
       .withSupervisorStrategy(CopyWorkflowLogsActor.strategy)
