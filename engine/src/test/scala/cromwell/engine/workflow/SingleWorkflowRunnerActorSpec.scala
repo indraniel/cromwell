@@ -47,6 +47,7 @@ object SingleWorkflowRunnerActorSpec {
                                       metadataOutputPath: Option[Path])
     extends SingleWorkflowRunnerActor(source, metadataOutputPath) {
     override lazy val serviceRegistryActor = CromwellTestkitSpec.ServiceRegistryActorInstance
+    workflowManagerActor
   }
 }
 

@@ -251,7 +251,7 @@ object CromwellTestkitSpec {
 
     class TestCromwellRootActor(config: Config) extends CromwellRootActor {
       override lazy val serviceRegistryActor = ServiceRegistryActorInstance
-
+      workflowManagerActor
       def submitWorkflow(sources: WorkflowSourceFiles): WorkflowId = {
         val submitMessage = WorkflowStoreActor.SubmitWorkflow(sources)
         val result = Await.result(workflowStoreActor.ask(submitMessage)(TimeoutDuration), Duration.Inf).asInstanceOf[WorkflowSubmittedToStore].workflowId

@@ -53,6 +53,8 @@ class CromwellServerActor(config: Config) extends CromwellRootActor with Cromwel
   implicit def executionContext = actorRefFactory.dispatcher
   override def actorRefFactory = context
 
+  workflowManagerActor
+
   val possibleRoutes = workflowRoutes.wrapped("api", config.getBooleanOr("api.routeUnwrapped")) ~ swaggerUiResourceRoute
   val timeoutError = APIResponse.error(new TimeoutException("The server was not able to produce a timely response to your request.")).toJson.prettyPrint
 

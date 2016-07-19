@@ -76,6 +76,8 @@ case class SingleWorkflowRunnerActor(source: WorkflowSourceFiles,
 
   import SingleWorkflowRunnerActor._
 
+  workflowManagerActor
+
   private val backoff = SimpleExponentialBackoff(1 second, 1 minute, 1.2)
   private implicit val system = context.system
   private implicit val timeout = Timeout(5 seconds)
