@@ -19,7 +19,7 @@ import cromwell.services.ServiceRegistryActor
   * If any of the actors created by CromwellRootActor fail to initialize the ActorSystem will die, which means that
   * Cromwell will fail to start in a bad state regardless of the entry point.
   */
- abstract class CromwellRootActor extends Actor {
+ trait CromwellRootActor extends Actor {
   private val logger = Logging(context.system, this)
 
    lazy val serviceRegistryActor = {
