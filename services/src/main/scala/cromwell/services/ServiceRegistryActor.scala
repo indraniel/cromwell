@@ -38,6 +38,10 @@ object ServiceRegistryActor {
 case class ServiceRegistryActor(globalConfig: Config) extends Actor with ActorLogging {
   import ServiceRegistryActor._
 
+  override def postStop() = {
+    println("HELP I AM DYING")
+  }
+
   val services: Map[String, ActorRef] = serviceNameToPropsMap(globalConfig) map {
     case (name, props) => name -> context.actorOf(props, name)
   }
@@ -60,8 +64,9 @@ case class ServiceRegistryActor(globalConfig: Config) extends Actor with ActorLo
     * the error up the chain
     */
   override val supervisorStrategy = OneForOneStrategy() {
-    case _: ActorInitializationException =>
+    case aie: ActorInitializationException =>
       println("OMG NOOOOOOOOOO!")
+      println("EXCEPTION: " + aie)
       Escalate
     case t => super.supervisorStrategy.decider.applyOrElse(t, (_: Any) => Escalate)
   }
