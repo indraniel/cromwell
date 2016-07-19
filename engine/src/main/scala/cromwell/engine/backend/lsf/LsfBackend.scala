@@ -151,7 +151,7 @@ case class LsfBackend(actorSystem: ActorSystem) extends Backend with SharedFileS
    */
   private def writeScript(jobDescriptor: BackendCallJobDescriptor, instantiatedCommand: String) = {
     jobDescriptor.script.write(
-      s"""#!/bin/sh
+      s"""#!/bin/bash
          |$instantiatedCommand
          |echo $$? > rc
          |""".stripMargin)
@@ -171,7 +171,7 @@ case class LsfBackend(actorSystem: ActorSystem) extends Backend with SharedFileS
       case false => scala.collection.immutable.Map()
     })
 
-    val argv = (lsfOption.foldLeft(Seq("bsub"))((command, kv) =>  command ++ Seq(kv._1, kv._2.toString)) ++  Seq("/bin/sh", jobDescriptor.script.toAbsolutePath)).map(_.toString)
+    val argv = (lsfOption.foldLeft(Seq("bsub"))((command, kv) =>  command ++ Seq(kv._1, kv._2.toString)) ++  Seq("/bin/bash", jobDescriptor.script.toAbsolutePath)).map(_.toString)
     val backendCommandString = argv.map(s => "\""+s+"\"").mkString(" ")
     logger.info(s"backend command: $backendCommandString")
 
