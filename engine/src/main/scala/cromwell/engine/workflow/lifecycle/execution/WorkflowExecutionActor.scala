@@ -34,6 +34,8 @@ import wdl4s.values.{WdlArray, WdlValue}
 import scala.annotation.tailrec
 import scala.language.postfixOps
 import scala.util.{Failure, Random, Success, Try}
+import scalaz.NonEmptyList
+import scalaz.Scalaz._
 
 object WorkflowExecutionActor {
 
@@ -127,7 +129,8 @@ object WorkflowExecutionActor {
     override val tag = s"Collector-${scope.unqualifiedName}"
   }
 
-  case class WorkflowExecutionException(override val throwables: List[Throwable]) extends ThrowableAggregation {
+  case class WorkflowExecutionException(exceptions: NonEmptyList[Throwable]) extends ThrowableAggregation {
+    override val throwables = exceptions.list
     override val exceptionContext = s"WorkflowExecutionActor"
   }
 
@@ -579,7 +582,7 @@ final case class WorkflowExecutionActor(workflowId: WorkflowId,
 
             Success(WorkflowExecutionDiff(Map(jobKey -> ExecutionStatus.Starting)))
           case None =>
-            throw WorkflowExecutionException(List(new Exception(s"Could not get BackendLifecycleActor for backend $backendName")))
+            throw WorkflowExecutionException(new Exception(s"Could not get BackendLifecycleActor for backend $backendName").wrapNel)
         }
     }
   }

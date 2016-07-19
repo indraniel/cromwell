@@ -24,7 +24,7 @@ case object FilesystemJobStoreDatabase extends JobStoreDatabase {
   override def writeToDatabase(jobCompletions: Map[JobStoreKey, JobResult], workflowCompletions: List[WorkflowId])(implicit ec: ExecutionContext): Future[Unit] = {
     for {
       _ <- writeJobResultsSerially(jobCompletions)
-      _ <- writeWorkflowResultsSerially(workflowCompletions)
+      _ <- clearWorkflowResultsSerially(workflowCompletions)
     } yield ()
   }
 
@@ -46,7 +46,7 @@ case object FilesystemJobStoreDatabase extends JobStoreDatabase {
     }
   }
 
-  private def writeWorkflowResultsSerially(workflowCompletions: List[WorkflowId])(implicit ec: ExecutionContext): Future[Unit] = {
+  private def clearWorkflowResultsSerially(workflowCompletions: List[WorkflowId])(implicit ec: ExecutionContext): Future[Unit] = {
 
     def folderFunction(current: Future[Unit], nextId: WorkflowId): Future[Unit] = current flatMap { _ => clearWorkflowResults(nextId) }
 
@@ -58,10 +58,8 @@ case object FilesystemJobStoreDatabase extends JobStoreDatabase {
       val path = Paths.get(s"${fsroot.toString}$separator$workflowId").toAbsolutePath
       if (Files.exists(path)) {
         path.toFile.listFiles foreach { x =>
-          System.out.println(s"Nuking $path from orbit!")
           Files.delete(x.toPath)
         }
-        System.out.println(s"Nuking $path from orbit!")
         Files.delete(path)
       }
     }

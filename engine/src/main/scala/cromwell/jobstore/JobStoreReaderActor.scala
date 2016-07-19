@@ -18,8 +18,8 @@ class JobStoreReaderActor(database: JobStoreDatabase) extends Actor with ActorLo
     case QueryJobCompletion(key) =>
       val replyTo = sender()
       database.readJobResult(key) onComplete {
-        case Success(Some(result)) => replyTo ! JobComplete(key, result)
-        case Success(None) => replyTo ! JobNotComplete(key)
+        case Success(Some(result)) => replyTo ! JobComplete(result)
+        case Success(None) => replyTo ! JobNotComplete
         case Failure(t) => replyTo ! JobStoreReadFailure(key, t)
       }
     case unknownMessage => log.error(s"Unexpected message to JobStoreReader: $unknownMessage")

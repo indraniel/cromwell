@@ -10,13 +10,12 @@ import cromwell.engine.workflow.WorkflowDescriptorBuilder
 import cromwell.engine.workflow.lifecycle.execution.EngineJobExecutionActor._
 import cromwell.engine.workflow.lifecycle.execution.JobPreparationActor.BackendJobPreparationFailed
 import cromwell.jobstore.JobStoreService.{JobComplete, JobNotComplete}
-import cromwell.jobstore.{JobResultFailure, JobResultSuccess, JobStoreKey}
+import cromwell.jobstore.{JobResultFailure, JobResultSuccess, Pending => _}
 import cromwell.util.SampleWdl
 import org.scalatest.{BeforeAndAfterAll, Matchers}
 import org.specs2.mock.Mockito
 import wdl4s.expression.{NoFunctions, WdlStandardLibraryFunctions}
 import wdl4s.{Call, Task}
-import cromwell.jobstore.{Pending => _, _}
 
 class EngineJobExecutionActorSpec extends CromwellTestkitSpec with Matchers with WorkflowDescriptorBuilder with Mockito with BeforeAndAfterAll {
 
@@ -59,7 +58,7 @@ class EngineJobExecutionActorSpec extends CromwellTestkitSpec with Matchers with
       val returnCode: Option[Int] = Option(0)
       val jobOutputs: JobOutputs = Map.empty
 
-      ejea ! JobComplete(mock[JobStoreKey], JobResultSuccess(returnCode, jobOutputs))
+      ejea ! JobComplete(JobResultSuccess(returnCode, jobOutputs))
 
       ejeaParent.expectMsgPF(awaitTimeout) {
         case response: SucceededResponse =>
@@ -76,7 +75,7 @@ class EngineJobExecutionActorSpec extends CromwellTestkitSpec with Matchers with
       val returnCode: Option[Int] = Option(1)
       val reason: Throwable = new Exception("something horrible happened...")
 
-      ejea ! JobComplete(mock[JobStoreKey], JobResultFailure(returnCode, reason))
+      ejea ! JobComplete(JobResultFailure(returnCode, reason))
 
       ejeaParent.expectMsgPF(awaitTimeout) {
         case response: FailedNonRetryableResponse =>
@@ -96,7 +95,7 @@ class EngineJobExecutionActorSpec extends CromwellTestkitSpec with Matchers with
       val call = Call(None, "wf.call", task, Set.empty, Map.empty, None)
 
       val jobKey = BackendJobDescriptorKey(call, None, 1)
-      ejea ! JobNotComplete(jobKey.toJobStoreKey(WorkflowId.randomId()))
+      ejea ! JobNotComplete
 
       backendProbe.expectMsg(awaitTimeout, RecoverJobCommand)
 

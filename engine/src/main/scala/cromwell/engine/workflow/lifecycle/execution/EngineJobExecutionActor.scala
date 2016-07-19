@@ -52,9 +52,9 @@ class EngineJobExecutionActor(jobKey: BackendJobDescriptorKey,
   }
 
   when(CheckingJobStatus) {
-    case Event(JobNotComplete(_), _) =>
+    case Event(JobNotComplete, _) =>
       prepareJob(jobKey)
-    case Event(JobComplete(_, jobResult), _) =>
+    case Event(JobComplete(jobResult), _) =>
       jobResult match {
         case JobResultSuccess(returnCode, jobOutputs) =>
           context.parent ! SucceededResponse(jobKey, returnCode, jobOutputs)

@@ -42,11 +42,11 @@ class JobStoreWriterSpec extends CromwellTestkitSpec with Matchers with BeforeAn
     database.workflowCompletionsRecorded shouldBe workflowCompletionsRecorded
   }
 
-  private def assertReceived(allowWorkflowCompleted: Boolean): Unit = {
-    val received = receiveN(3, 10 seconds)
+  private def assertReceived(expectedJobCompletionMessages: Int): Unit = {
+    val received = receiveN(expectedJobCompletionMessages, 10 seconds)
     received foreach {
       case JobStoreWriteSuccess(RegisterJobCompleted(key: JobStoreKey, result)) => assertWriteSuccess(key, result)
-      case JobStoreWriteSuccess(RegisterWorkflowCompleted(id)) if allowWorkflowCompleted => id shouldBe workflowId
+      case JobStoreWriteSuccess(RegisterWorkflowCompleted(id)) => id shouldBe workflowId
       case message => fail(s"Unexpected response message: $message")
     }
   }
@@ -55,7 +55,7 @@ class JobStoreWriterSpec extends CromwellTestkitSpec with Matchers with BeforeAn
     "be able to collapse writes together if they arrive while a database access is ongoing" in {
 
       registerCompletions(attempts = 3)
-      assertReceived(allowWorkflowCompleted = false)
+      assertReceived(expectedJobCompletionMessages = 3)
 
       assertDb(
         totalWritesCalled = 2,
@@ -68,7 +68,7 @@ class JobStoreWriterSpec extends CromwellTestkitSpec with Matchers with BeforeAn
 
       registerCompletions(attempts = 2)
       jobStoreWriter ! RegisterWorkflowCompleted(workflowId)
-      assertReceived(allowWorkflowCompleted = true)
+      assertReceived(expectedJobCompletionMessages = 3)
 
       assertDb(
         totalWritesCalled = 2,
